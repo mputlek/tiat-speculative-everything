@@ -47,17 +47,18 @@
     lastSentAt = now;
 
     sendBtn.disabled = true;
-    channel.publish('message', { text, ts: now, clientId }, (err) => {
-      sendBtn.disabled = false;
-      if (err) {
+    channel.publish('message', { text, ts: now, clientId })
+      .then(() => {
+        sendBtn.disabled = false;
+        feedback.style.color = '#4caf50';
+        feedback.textContent = 'Your message reached the mycelium.';
+        input.value = '';
+      })
+      .catch((err) => {
+        sendBtn.disabled = false;
         feedback.textContent = 'Message did not reach the mycelium. Try again.';
         feedback.style.color = '#c0392b';
         console.error('Ably publish error', err);
-        return;
-      }
-      feedback.style.color = '#4caf50';
-      feedback.textContent = 'Your message reached the mycelium.';
-      input.value = '';
-    });
+      });
   });
 })();
