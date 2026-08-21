@@ -1,0 +1,72 @@
+/* Placeholder styling only — the mycelium thread visuals, atmosphere glow,
+   and Animal Crossing palette land after the core mechanic is proven. */
+
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: #10141a;
+  font-family: system-ui, -apple-system, sans-serif;
+  color: #f4f1ea;
+}
+
+#globeViz {
+  width: 100vw;
+  height: 100vh;
+}
+
+.overlay {
+  position: fixed;
+  top: 24px;
+  left: 24px;
+  right: 24px;
+  max-width: 340px;
+  pointer-events: none;
+}
+
+.status {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #8a8f87;
+  margin: 0 0 4px;
+}
+
+.status.connected {
+  color: #4caf50;
+}
+
+.status.error {
+  color: #e57373;
+}
+
+.stage {
+  font-size: 1.6rem;
+  font-weight: 600;
+  margin: 0 0 12px;
+}
+
+.healthBar {
+  width: 100%;
+  height: 14px;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 7px;
+  overflow: hidden;
+}
+
+.healthBarFill {
+  height: 100%;
+  width: 0%;
+  background: #4caf50;
+  transition: width 1.2s ease-out, background-color 1.2s ease-out;
+}
+
+.healthCount {
+  font-size: 0.85rem;
+  color: #cfcfcf;
+  margin: 8px 0 0;
+}

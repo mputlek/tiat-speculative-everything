@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Fun-Guy — Globe</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="globeViz"></div>
+
+  <div class="overlay">
+    <p class="status" id="status">connecting…</p>
+    <p class="stage" id="stage">Dormant</p>
+    <div class="healthBar">
+      <div class="healthBarFill" id="healthBarFill"></div>
+    </div>
+    <p class="healthCount" id="healthCount">0 messages received</p>
+  </div>
+
+  <script src="https://cdn.ably.com/lib/ably.min.js"></script>
+  <script src="//unpkg.com/globe.gl"></script>
+  <script src="../shared/config.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
