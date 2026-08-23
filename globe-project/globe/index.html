@@ -24,6 +24,15 @@
     <p class="healthCount" id="healthCount">0 messages received</p>
   </div>
 
+  <!-- Testing only — shown when the URL has ?debug, hidden otherwise
+       (never appears on the real kiosk display). Scrubs healthValue
+       directly to preview the Dormant -> Thriving transition without
+       sending real Ably messages. -->
+  <div class="debugPanel" id="debugPanel" hidden>
+    <label for="debugSlider">debug: messages received (<span id="debugSliderValue">0</span>)</label>
+    <input type="range" id="debugSlider" min="0" max="50" value="0" step="1" />
+  </div>
+
   <script src="https://cdn.ably.com/lib/ably.min-2.js"></script>
   <script src="//unpkg.com/globe.gl"></script>
   <script src="../shared/config.js"></script>

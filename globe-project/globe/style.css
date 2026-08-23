@@ -1,9 +1,9 @@
-/* Realistic Earth rendering techniques (terrain relief, separate cloud
-   layer, glossy ocean, atmosphere glow) borrowed from the reference photo,
-   on a beige page background per explicit preference — a hybrid rather
-   than a literal color match to the reference's dark backdrop. The pure
-   Animal Crossing version lives on the `animal-crossing` branch. Mycelium
-   thread network, health bar, and growth mechanic are unchanged from that
+/* Realistic Earth rendering techniques (terrain relief, clouds, glossy
+   ocean, atmosphere glow) borrowed from the reference photo, on a beige
+   page background per explicit preference — a hybrid rather than a
+   literal color match to the reference's dark backdrop. The pure Animal
+   Crossing version lives on the `animal-crossing` branch. Mycelium thread
+   network, health bar, and growth mechanic are unchanged from that
    branch; only the globe's visual skin differs. */
 
 * {
@@ -74,4 +74,27 @@ html, body {
   font-size: 0.85rem;
   color: #6b5d58;
   margin: 8px 0 0;
+}
+
+.debugPanel {
+  position: fixed;
+  bottom: 20px;
+  left: 20px;
+  right: 20px;
+  max-width: 420px;
+  padding: 10px 14px;
+  background: rgba(0, 0, 0, 0.75);
+  border-radius: 8px;
+  font-family: ui-monospace, monospace;
+}
+
+.debugPanel label {
+  display: block;
+  font-size: 0.75rem;
+  color: #f0d060;
+  margin-bottom: 6px;
+}
+
+.debugPanel input[type='range'] {
+  width: 100%;
 }

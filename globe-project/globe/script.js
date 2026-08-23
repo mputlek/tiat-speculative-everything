@@ -60,6 +60,34 @@
 
   render();
 
+  // --- debug slider (only shown with ?debug in the URL) ------------------
+  // Scrubs healthValue/messageCount directly so the Dormant -> Thriving
+  // transition can be previewed without sending real Ably messages. Lives
+  // here (not inside setUpGlobe) so it drives both the 2D health bar and,
+  // via the shared `state` object, the 3D globe's own animation loop
+  // whenever that succeeds — same as a real message would.
+  if (new URLSearchParams(location.search).has('debug')) {
+    const debugPanel = document.getElementById('debugPanel');
+    const debugSlider = document.getElementById('debugSlider');
+    const debugSliderValue = document.getElementById('debugSliderValue');
+    const healthIncrement = config.HEALTH_INCREMENT || 2;
+    const maxMessages = Math.ceil(HEALTH_MAX / healthIncrement);
+
+    debugPanel.hidden = false;
+    debugSlider.max = String(maxMessages);
+    debugSlider.value = String(state.messageCount);
+    debugSliderValue.textContent = String(state.messageCount);
+
+    debugSlider.addEventListener('input', () => {
+      const count = Number(debugSlider.value);
+      state.messageCount = count;
+      state.healthValue = Math.min(HEALTH_MAX, count * healthIncrement);
+      debugSliderValue.textContent = String(count);
+      saveState();
+      render();
+    });
+  }
+
   // --- ably -------------------------------------------------------------
   // Connects immediately, independent of everything below — the core
   // message pipeline must keep working even if the globe's visuals
