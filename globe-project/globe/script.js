@@ -101,11 +101,12 @@
   }
 
   async function setUpGlobe() {
-    // Health-driven palette: atmosphere + mycelium arc glow. Beige page
-    // background/aqua ocean per current design direction.
-    const ATMOSPHERE_DORMANT = [216, 207, 197]; // barely-there warm glow
-    const ATMOSPHERE_THRIVING = [190, 235, 238]; // pale aqua glow — kept soft
-    // so it doesn't wash out the beige page background around the globe
+    // Health-driven palette: atmosphere + mycelium arc glow. Reverted to
+    // match the reference photo's actual colors (dark blue background,
+    // natural photographic ocean) rather than the earlier beige/aqua
+    // experiment.
+    const ATMOSPHERE_DORMANT = [90, 110, 140]; // dim grey-blue
+    const ATMOSPHERE_THRIVING = [100, 180, 240]; // vivid sky blue
 
     function lerpColor(a, b, t) {
       const c = a.map((v, i) => Math.round(v + (b[i] - v) * t));
@@ -118,13 +119,13 @@
       return `rgba(${c[0]}, ${c[1]}, ${c[2]}, ${alpha.toFixed(2)})`;
     }
 
-    // --- realistic Earth texture, ocean recolored toward aqua -----------
+    // --- realistic Earth texture ----------------------------------------
     // Real photographic Earth (three-globe's bundled Blue Marble asset) +
     // terrain bump map, desaturated toward Dormant / full color toward
-    // Thriving, ocean pixels tinted toward a sky-blue/aqua target (Blue
-    // Marble's ocean is a duller navy by default), soft cloud wisps
-    // composited into the same canvas. Regenerated only on a 5% health
-    // step, not every animation frame.
+    // Thriving, ocean left at its natural photographic color (no tint —
+    // reverted per request to match the reference photo's actual colors),
+    // soft cloud wisps composited into the same canvas. Regenerated only
+    // on a 5% health step, not every animation frame.
     // Matches the bump map's native resolution (2048x1024) — the earlier
     // 1024x512 (halved for perceived perf headroom around the per-pixel
     // ocean-tint loop) threw away real detail from the 4096x2048 source
@@ -140,8 +141,6 @@
     // across every redirect hop, browser, and cache state.
     const EARTH_IMAGE_URL = 'assets/earth-blue-marble.jpg';
     const BUMP_IMAGE_URL = 'assets/earth-topology.png';
-    const OCEAN_TARGET = [110, 220, 225]; // aqua/turquoise
-    const OCEAN_BLEND = 0.85;
 
     function loadImage(url) {
       return new Promise((resolve, reject) => {
@@ -150,31 +149,6 @@
         img.onerror = reject;
         img.src = url;
       });
-    }
-
-    function tintOceanTowardAqua(ctx, width, height) {
-      const imageData = ctx.getImageData(0, 0, width, height);
-      const data = imageData.data;
-      for (let i = 0; i < data.length; i += 4) {
-        const r = data[i];
-        const g = data[i + 1];
-        const b = data[i + 2];
-        // Continuous "blueness" score rather than a hard on/off threshold —
-        // the previous version only caught the most saturated deep-ocean
-        // pixels and left lighter coastal/hazy water untouched (patchy).
-        // Scaling blend by blueness means even faintly blue-dominant
-        // pixels shift some amount toward aqua, while land (blue is not
-        // the dominant channel) stays at zero.
-        const blueDominance = b - Math.max(r, g);
-        const blueness = Math.max(0, Math.min(1, blueDominance / 25));
-        if (blueness > 0) {
-          const blend = blueness * OCEAN_BLEND;
-          data[i] = Math.round(r + (OCEAN_TARGET[0] - r) * blend);
-          data[i + 1] = Math.round(g + (OCEAN_TARGET[1] - g) * blend);
-          data[i + 2] = Math.round(b + (OCEAN_TARGET[2] - b) * blend);
-        }
-      }
-      ctx.putImageData(imageData, 0, 0);
     }
 
     function buildCloudBlobs() {
@@ -200,14 +174,14 @@
       canvas.height = TEXTURE_HEIGHT;
       const ctx = canvas.getContext('2d');
 
-      // Damaged (t=0): desaturated and dim. Healed (t=1): full vivid color.
-      const saturation = 20 + t * 80;
-      const brightness = 70 + t * 30;
+      // Damaged (t=0): desaturated and dim, but not washed-out grey — floor
+      // raised (was 20%/70%) so land keeps some natural color even early
+      // on. Healed (t=1): full vivid color, matching the reference photo.
+      const saturation = 40 + t * 60;
+      const brightness = 80 + t * 20;
       ctx.filter = `saturate(${saturation}%) brightness(${brightness}%)`;
       ctx.drawImage(earthImage, 0, 0, canvas.width, canvas.height);
       ctx.filter = 'none';
-
-      tintOceanTowardAqua(ctx, canvas.width, canvas.height);
 
       const cloudOpacity = 0.45;
       cloudBlobs.forEach(({ x, y, r }) => {
@@ -312,7 +286,7 @@
       .globeImageUrl(generateGlobeTexture(earthBaseImage, initialT))
       .bumpImageUrl(BUMP_IMAGE_URL)
       .bumpScale(10)
-      .backgroundColor('#f3e6eb')
+      .backgroundColor('#0a1a2e')
       .showAtmosphere(true)
       .arcAltitude(0.05)
       .arcDashLength(0.4)
@@ -324,7 +298,7 @@
     globe.controls().autoRotate = true;
     globe.controls().autoRotateSpeed = 1.2;
 
-    const BASE_ATMOSPHERE_ALTITUDE = 0.12;
+    const BASE_ATMOSPHERE_ALTITUDE = 0.2;
     const PULSE_AMPLITUDE = 0.02;
     const PULSE_PERIOD_MS = 6000;
     const ARC_COLOR_DIM = [140, 150, 158];
