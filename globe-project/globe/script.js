@@ -39,6 +39,12 @@
   const ATMOSPHERE_DORMANT = [216, 207, 197]; // #d8cfc5 barely-there warm glow
   const ATMOSPHERE_THRIVING = [232, 184, 222]; // #e8b8de soft lavender-pink
 
+  // Land color only — ocean stays a fixed blue regardless of health (see
+  // generateGlobeTexture below). Bare/damaged brown regrows into forest
+  // green as the mycelium network spreads.
+  const LAND_DORMANT = [180, 140, 100]; // #b48c64 bare warm brown
+  const LAND_THRIVING = [100, 180, 120]; // #64b478 soft forest green
+
   function lerpColor(a, b, t) {
     const c = a.map((v, i) => Math.round(v + (b[i] - v) * t));
     return `rgb(${c[0]}, ${c[1]}, ${c[2]})`;
@@ -50,37 +56,68 @@
     return 'Thriving';
   }
 
-  // Procedurally generated placeholder surface texture — soft, feathered
-  // blobs standing in for landmass/mycelium-colony shapes until real
-  // artwork replaces this. Drawn in a light, low-contrast neutral tone on
-  // purpose: three.js multiplies this texture against globeMaterial's
-  // color, so keeping it pale lets the health-driven Dormant/Thriving tint
-  // (see render loop below) still read as the globe's dominant color —
-  // this canvas only adds gentle surface relief, not the actual color.
-  function generateGlobeTexture() {
+  // Procedurally generated placeholder surface texture: fixed ocean (blue)
+  // + landmass shapes whose fill color lerps brown -> green as healthValue
+  // rises, standing in for forests regrowing on the land. The landmass
+  // *shape* (landBlobs, built once below) never changes — only the fill
+  // color is redrawn — so regenerating the texture as health changes
+  // doesn't make continents visibly jitter/reshuffle.
+  const TEXTURE_WIDTH = 1024;
+  const TEXTURE_HEIGHT = 512;
+  const OCEAN_COLOR = '#8fc7e8';
+
+  // Loose, made-up continent positions (not geographically precise) purely
+  // to give the globe a recognizable "this is Earth" silhouette until real
+  // art replaces this.
+  const CONTINENT_SEEDS = [
+    { lat: 45, lng: -100 }, // North America
+    { lat: -15, lng: -60 }, // South America
+    { lat: 50, lng: 15 }, // Europe
+    { lat: 5, lng: 20 }, // Africa
+    { lat: 45, lng: 90 }, // Asia
+    { lat: -25, lng: 135 }, // Australia
+  ];
+
+  function latLngToXY(lat, lng, width, height) {
+    const x = ((lng + 180) / 360) * width;
+    const y = ((90 - lat) / 180) * height;
+    return { x, y };
+  }
+
+  function buildLandBlobs() {
+    const blobs = [];
+    CONTINENT_SEEDS.forEach(({ lat, lng }) => {
+      const { x, y } = latLngToXY(lat, lng, TEXTURE_WIDTH, TEXTURE_HEIGHT);
+      const blobCount = 7 + Math.floor(Math.random() * 4);
+      for (let i = 0; i < blobCount; i++) {
+        blobs.push({
+          x: x + (Math.random() - 0.5) * 90,
+          y: y + (Math.random() - 0.5) * 60,
+          r: 25 + Math.random() * 35,
+        });
+      }
+    });
+    return blobs;
+  }
+
+  // Built once at load — this is the fixed "coastline" shape.
+  const landBlobs = buildLandBlobs();
+
+  function generateGlobeTexture(landColor) {
     const canvas = document.createElement('canvas');
-    canvas.width = 1024;
-    canvas.height = 512;
+    canvas.width = TEXTURE_WIDTH;
+    canvas.height = TEXTURE_HEIGHT;
     const ctx = canvas.getContext('2d');
 
-    ctx.fillStyle = '#ede8de';
+    ctx.fillStyle = OCEAN_COLOR;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    const blobCount = 55;
-    for (let i = 0; i < blobCount; i++) {
-      const x = Math.random() * canvas.width;
-      const y = Math.random() * canvas.height;
-      const r = 30 + Math.random() * 70;
-
-      const gradient = ctx.createRadialGradient(x, y, 0, x, y, r);
-      gradient.addColorStop(0, 'rgba(216, 207, 192, 0.55)');
-      gradient.addColorStop(1, 'rgba(216, 207, 192, 0)');
-
-      ctx.fillStyle = gradient;
+    ctx.fillStyle = landColor;
+    landBlobs.forEach(({ x, y, r }) => {
       ctx.beginPath();
       ctx.arc(x, y, r, 0, Math.PI * 2);
       ctx.fill();
-    }
+    });
 
     return canvas.toDataURL('image/png');
   }
@@ -206,8 +243,9 @@
   }
 
   // --- globe (placeholder procedural texture; mycelium threads below) -----
+  const initialLandColor = lerpColor(LAND_DORMANT, LAND_THRIVING, state.healthValue / HEALTH_MAX);
   const globe = Globe()(document.getElementById('globeViz'))
-    .globeImageUrl(generateGlobeTexture())
+    .globeImageUrl(generateGlobeTexture(initialLandColor))
     .backgroundColor('#f3e6eb')
     .showAtmosphere(true)
     .arcAltitude(0.05)
@@ -215,36 +253,53 @@
     .arcDashGap(0.3)
     .arcDashAnimateTime(5000);
 
+  // White so the globe material doesn't tint the texture — three.js
+  // multiplies map texture x material color, and generateGlobeTexture()
+  // already encodes final land/ocean colors directly, so anything other
+  // than white here would wash out the ocean's blue.
+  globe.globeMaterial().color.set('#ffffff');
+
   // Slow ambient auto-rotate so the display reads as alive even when no
   // visitor is touching it — living-system pacing, not a static image.
   // Visitors can still drag to spin manually; OrbitControls pauses
   // auto-rotate during that interaction and resumes after.
   globe.controls().autoRotate = true;
-  globe.controls().autoRotateSpeed = 0.4;
+  globe.controls().autoRotateSpeed = 1.2;
 
-  // Continuously eases the globe's surface/atmosphere color toward
-  // healthValue's target (rather than snapping on each message) and adds a
-  // slow idle "breathing" pulse to the atmosphere altitude — living-system
-  // pacing, not a static image or a tech-style instant jump.
+  // Continuously eases the atmosphere glow toward healthValue's target
+  // (rather than snapping on each message) and adds a slow idle
+  // "breathing" pulse to its altitude — living-system pacing, not a
+  // static image or a tech-style instant jump. The globe's land texture is
+  // regenerated on the same easing curve, just throttled (see textureBucket
+  // below) since redrawing a canvas is far more expensive than a color set.
   const BASE_ATMOSPHERE_ALTITUDE = 0.2;
   const PULSE_AMPLITUDE = 0.02;
   const PULSE_PERIOD_MS = 6000;
   const ARC_COLOR_DIM = [168, 161, 144]; // matches dormant surface tone
   const ARC_COLOR_GLOW = [130, 255, 210]; // vivid bright mint glow
+  const TEXTURE_STEPS = 20; // 5% granularity
   let currentT = state.healthValue / HEALTH_MAX;
   let lastRevealCount = -1;
+  let lastTextureBucket = Math.floor(currentT * TEXTURE_STEPS);
 
   function animateGlobe() {
     const targetT = state.healthValue / HEALTH_MAX;
     currentT += (targetT - currentT) * 0.02;
 
-    const color = lerpColor(DORMANT_COLOR, THRIVING_COLOR, currentT);
     const atmosphereColor = lerpColor(ATMOSPHERE_DORMANT, ATMOSPHERE_THRIVING, currentT);
     const pulse = Math.sin((performance.now() / PULSE_PERIOD_MS) * 2 * Math.PI) * PULSE_AMPLITUDE;
 
-    globe.globeMaterial().color.set(color);
     globe.atmosphereColor(atmosphereColor);
     globe.atmosphereAltitude(BASE_ATMOSPHERE_ALTITUDE + pulse);
+
+    // Regrow forests on the land as health rises — regenerate the texture
+    // only when currentT crosses a new 5% step, not every frame.
+    const textureBucket = Math.floor(currentT * TEXTURE_STEPS);
+    if (textureBucket !== lastTextureBucket) {
+      lastTextureBucket = textureBucket;
+      const landColor = lerpColor(LAND_DORMANT, LAND_THRIVING, currentT);
+      globe.globeImageUrl(generateGlobeTexture(landColor));
+    }
 
     // Reveal threads gradually as currentT eases upward — sparse/no
     // network at Dormant, fully spread at Thriving. Only touch arcsData
