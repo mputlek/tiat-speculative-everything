@@ -1,5 +1,6 @@
-/* Placeholder styling only — the mycelium thread visuals, atmosphere glow,
-   and Animal Crossing palette land after the core mechanic is proven. */
+/* Background + typography pass landed; the mycelium thread visuals and full
+   Animal Crossing palette (globe color lerp, health bar, atmosphere) are
+   still placeholder and come next. */
 
 * {
   box-sizing: border-box;
@@ -9,9 +10,9 @@ html, body {
   margin: 0;
   height: 100%;
   overflow: hidden;
-  background: #10141a;
-  font-family: system-ui, -apple-system, sans-serif;
-  color: #f4f1ea;
+  background: #f3e6eb;
+  font-family: 'Quicksand', system-ui, -apple-system, sans-serif;
+  color: #4a3b36;
 }
 
 #globeViz {
@@ -32,7 +33,7 @@ html, body {
   font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: #8a8f87;
+  color: #8f8378;
   margin: 0 0 4px;
 }
 
@@ -41,19 +42,19 @@ html, body {
 }
 
 .status.error {
-  color: #e57373;
+  color: #c0392b;
 }
 
 .stage {
   font-size: 1.6rem;
-  font-weight: 600;
+  font-weight: 700;
   margin: 0 0 12px;
 }
 
 .healthBar {
   width: 100%;
   height: 14px;
-  background: rgba(255, 255, 255, 0.15);
+  background: rgba(74, 59, 54, 0.12);
   border-radius: 7px;
   overflow: hidden;
 }
@@ -67,6 +68,6 @@ html, body {
 
 .healthCount {
   font-size: 0.85rem;
-  color: #cfcfcf;
+  color: #6b5d58;
   margin: 8px 0 0;
 }

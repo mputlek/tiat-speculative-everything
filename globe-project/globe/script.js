@@ -68,7 +68,7 @@
 
   // --- globe (placeholder: plain colored sphere, no texture/threads yet) -
   const globe = Globe()(document.getElementById('globeViz'))
-    .backgroundColor('#10141a')
+    .backgroundColor('#f3e6eb')
     .showAtmosphere(true)
     .atmosphereAltitude(0.2);
 

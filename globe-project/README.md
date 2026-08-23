@@ -3,7 +3,7 @@
 Working prototype: two static pages, no backend server. Visitors "talk to
 the fun-guy" on their phone at `/message`; every message they send publishes
 to an Ably channel that `/globe` subscribes to, nudging a `healthValue`
-(0–100) up and changing the globe's appearance.
+(0–100) up and chi anging the globe's appearance.
 
 **Current state is intentionally bare.** Placeholder copy, a plain colored
 sphere, a literal health bar. The goal right now is only: prove phone →

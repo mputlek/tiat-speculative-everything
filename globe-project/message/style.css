@@ -1,5 +1,6 @@
-/* Placeholder styling only — art direction (Animal Crossing palette, rounded
-   friendly type, mycelium motifs) comes after the core mechanic works. */
+/* Background + typography pass landed; the full Animal Crossing palette
+   (buttons, accents) and mycelium motifs are still placeholder and come
+   next. */
 
 * {
   box-sizing: border-box;
@@ -11,9 +12,9 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #f4f1ea;
-  color: #2b2b2b;
-  font-family: system-ui, -apple-system, sans-serif;
+  background: #f3e6eb;
+  color: #4a3b36;
+  font-family: 'Quicksand', system-ui, -apple-system, sans-serif;
   padding: 24px;
 }
 
@@ -26,7 +27,7 @@ body {
   font-size: 0.8rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: #8a8f87;
+  color: #8f8378;
   margin: 0 0 8px;
 }
 
