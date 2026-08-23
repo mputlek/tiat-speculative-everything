@@ -53,17 +53,15 @@
   function render() {
     const t = state.healthValue / HEALTH_MAX;
     const color = lerpColor(DORMANT_COLOR, THRIVING_COLOR, t);
-    const atmosphereColor = lerpColor(ATMOSPHERE_DORMANT, ATMOSPHERE_THRIVING, t);
 
+    // DOM elements only — the health bar's own CSS transition already
+    // smooths width/color changes. The 3D globe's color/glow are eased
+    // continuously in the animateGlobe() loop below instead, since
+    // three.js Color.set() has no built-in transition of its own.
     fillEl.style.width = `${state.healthValue}%`;
     fillEl.style.backgroundColor = color;
     stageEl.textContent = stageForHealth(state.healthValue);
     countEl.textContent = `${state.messageCount} message${state.messageCount === 1 ? '' : 's'} received`;
-
-    if (globe) {
-      globe.globeMaterial().color.set(color);
-      globe.atmosphereColor(atmosphereColor);
-    }
   }
 
   function onMessageReceived() {
@@ -76,8 +74,7 @@
   // --- globe (placeholder: plain colored sphere, no texture/threads yet) -
   const globe = Globe()(document.getElementById('globeViz'))
     .backgroundColor('#f3e6eb')
-    .showAtmosphere(true)
-    .atmosphereAltitude(0.2);
+    .showAtmosphere(true);
 
   // Slow ambient auto-rotate so the display reads as alive even when no
   // visitor is touching it — living-system pacing, not a static image.
@@ -86,7 +83,30 @@
   globe.controls().autoRotate = true;
   globe.controls().autoRotateSpeed = 0.4;
 
-  globe.globeMaterial().color.set(lerpColor(DORMANT_COLOR, THRIVING_COLOR, state.healthValue / HEALTH_MAX));
+  // Continuously eases the globe's surface/atmosphere color toward
+  // healthValue's target (rather than snapping on each message) and adds a
+  // slow idle "breathing" pulse to the atmosphere altitude — living-system
+  // pacing, not a static image or a tech-style instant jump.
+  const BASE_ATMOSPHERE_ALTITUDE = 0.2;
+  const PULSE_AMPLITUDE = 0.02;
+  const PULSE_PERIOD_MS = 6000;
+  let currentT = state.healthValue / HEALTH_MAX;
+
+  function animateGlobe() {
+    const targetT = state.healthValue / HEALTH_MAX;
+    currentT += (targetT - currentT) * 0.02;
+
+    const color = lerpColor(DORMANT_COLOR, THRIVING_COLOR, currentT);
+    const atmosphereColor = lerpColor(ATMOSPHERE_DORMANT, ATMOSPHERE_THRIVING, currentT);
+    const pulse = Math.sin((performance.now() / PULSE_PERIOD_MS) * 2 * Math.PI) * PULSE_AMPLITUDE;
+
+    globe.globeMaterial().color.set(color);
+    globe.atmosphereColor(atmosphereColor);
+    globe.atmosphereAltitude(BASE_ATMOSPHERE_ALTITUDE + pulse);
+
+    requestAnimationFrame(animateGlobe);
+  }
+  animateGlobe();
 
   render();
 
