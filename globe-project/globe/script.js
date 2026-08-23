@@ -285,7 +285,6 @@
     const globe = Globe()(document.getElementById('globeViz'))
       .globeImageUrl(generateGlobeTexture(earthBaseImage, initialT))
       .bumpImageUrl(BUMP_IMAGE_URL)
-      .bumpScale(10)
       .backgroundColor('#0a1a2e')
       .showAtmosphere(true)
       .arcAltitude(0.05)
@@ -294,6 +293,11 @@
       .arcDashAnimateTime(5000);
 
     globe.globeMaterial().color.set('#ffffff');
+    // bumpScale isn't a Globe.gl chainable accessor (that call was
+    // throwing, silently killing everything later in the chain — the root
+    // cause of the missing background/atmosphere/arcs). It's a real
+    // property on the underlying three.js material, set directly instead.
+    globe.globeMaterial().bumpScale = 10;
 
     globe.controls().autoRotate = true;
     globe.controls().autoRotateSpeed = 1.2;
