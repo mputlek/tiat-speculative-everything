@@ -171,6 +171,8 @@
     const BUMP_IMAGE_URL = 'assets/earth-topology.png';
     const OCEAN_TARGET = [110, 220, 225]; // aqua/turquoise
     const OCEAN_BLEND = 0.85;
+    const GREEN_TARGET = [70, 195, 85]; // vivid, brighter vegetation green
+    const GREEN_BLEND = 0.5; // milder than ocean — keep some natural photo variation
 
     function loadImage(url) {
       return new Promise((resolve, reject) => {
@@ -181,16 +183,17 @@
       });
     }
 
-    function tintOceanTowardAqua(ctx, width, height) {
+    function tintOceanAndGreen(ctx, width, height) {
       const imageData = ctx.getImageData(0, 0, width, height);
       const data = imageData.data;
       for (let i = 0; i < data.length; i += 4) {
         const r = data[i];
         const g = data[i + 1];
         const b = data[i + 2];
-        // Continuous "blueness" score rather than a hard on/off threshold,
-        // so lighter coastal/hazy water shifts too, not just the most
-        // saturated deep-ocean pixels — full even coverage, not patchy.
+
+        // Continuous "dominance" scores rather than hard on/off thresholds,
+        // so lighter/hazier pixels shift too, not just the most saturated
+        // ones — full even coverage, not patchy.
         const blueDominance = b - Math.max(r, g);
         const blueness = Math.max(0, Math.min(1, blueDominance / 25));
         if (blueness > 0) {
@@ -198,27 +201,46 @@
           data[i] = Math.round(r + (OCEAN_TARGET[0] - r) * blend);
           data[i + 1] = Math.round(g + (OCEAN_TARGET[1] - g) * blend);
           data[i + 2] = Math.round(b + (OCEAN_TARGET[2] - b) * blend);
+          continue; // a pixel is either water or land, never both
+        }
+
+        const greenDominance = g - Math.max(r, b);
+        const greenness = Math.max(0, Math.min(1, greenDominance / 20));
+        if (greenness > 0) {
+          const blend = greenness * GREEN_BLEND;
+          data[i] = Math.round(r + (GREEN_TARGET[0] - r) * blend);
+          data[i + 1] = Math.round(g + (GREEN_TARGET[1] - g) * blend);
+          data[i + 2] = Math.round(b + (GREEN_TARGET[2] - b) * blend);
         }
       }
       ctx.putImageData(imageData, 0, 0);
     }
 
-    // Clouds: composited directly into the same texture as soft white
-    // blobs. A genuinely separate, independently-rotating cloud layer (its
-    // own transparent sphere in the three.js scene) was attempted but
-    // required loading a second copy of three.js alongside globe.gl's
-    // internal bundle — that broke globe.gl's own initialization entirely
-    // ("Globe is not defined"), so reverted in favor of this simpler,
-    // stable approach. Revisit if a version-compatible way to share
-    // globe.gl's internal THREE instance turns up.
-    function buildCloudBlobs() {
+    // Clouds: composited directly into the same texture. A genuinely
+    // separate, independently-rotating cloud layer (its own transparent
+    // sphere in the three.js scene) was attempted but required loading a
+    // second copy of three.js alongside globe.gl's internal bundle — that
+    // broke globe.gl's own initialization entirely ("Globe is not
+    // defined"), so reverted in favor of this simpler, stable approach.
+    // Revisit if a version-compatible way to share globe.gl's internal
+    // THREE instance turns up.
+    //
+    // Two layers for more texture/detail than a single blob size: a few
+    // broad soft masses for base cover, plus many smaller, more-defined
+    // wisps layered on top. Each blob is an ellipse (not a circle) with a
+    // random rotation, avoiding the "uniform circular puffs" look.
+    function buildCloudLayer(count, sizeMin, sizeMax, opacity) {
       const blobs = [];
-      const cloudCount = 40;
-      for (let i = 0; i < cloudCount; i++) {
+      for (let i = 0; i < count; i++) {
+        const rx = sizeMin + Math.random() * (sizeMax - sizeMin);
+        const ry = rx * (0.5 + Math.random() * 0.5);
         blobs.push({
           x: Math.random() * TEXTURE_WIDTH,
           y: Math.random() * TEXTURE_HEIGHT,
-          r: 50 + Math.random() * 120,
+          rx,
+          ry,
+          rotation: Math.random() * Math.PI,
+          opacity,
         });
       }
       return blobs;
@@ -226,7 +248,25 @@
 
     // Built once — fixed cloud shapes, so regenerating the texture doesn't
     // make clouds visibly jump around.
-    const cloudBlobs = buildCloudBlobs();
+    const cloudMasses = buildCloudLayer(30, 70, 160, 0.35); // broad, soft base cover
+    const cloudWisps = buildCloudLayer(80, 15, 45, 0.55); // smaller, more-defined detail
+
+    function drawCloudLayer(ctx, blobs) {
+      blobs.forEach(({ x, y, rx, ry, rotation, opacity }) => {
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(rotation);
+        const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, Math.max(rx, ry));
+        gradient.addColorStop(0, `rgba(255, 255, 255, ${opacity})`);
+        gradient.addColorStop(0.6, `rgba(255, 255, 255, ${opacity * 0.5})`);
+        gradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+        ctx.fillStyle = gradient;
+        ctx.beginPath();
+        ctx.ellipse(0, 0, rx, ry, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      });
+    }
 
     function generateGlobeTexture(earthImage, t) {
       const canvas = document.createElement('canvas');
@@ -243,18 +283,10 @@
       ctx.drawImage(earthImage, 0, 0, canvas.width, canvas.height);
       ctx.filter = 'none';
 
-      tintOceanTowardAqua(ctx, canvas.width, canvas.height);
+      tintOceanAndGreen(ctx, canvas.width, canvas.height);
 
-      const cloudOpacity = 0.5;
-      cloudBlobs.forEach(({ x, y, r }) => {
-        const gradient = ctx.createRadialGradient(x, y, 0, x, y, r);
-        gradient.addColorStop(0, `rgba(255, 255, 255, ${cloudOpacity})`);
-        gradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
-        ctx.fillStyle = gradient;
-        ctx.beginPath();
-        ctx.arc(x, y, r, 0, Math.PI * 2);
-        ctx.fill();
-      });
+      drawCloudLayer(ctx, cloudMasses);
+      drawCloudLayer(ctx, cloudWisps);
 
       return canvas.toDataURL('image/jpeg', 0.95);
     }
