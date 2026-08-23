@@ -169,8 +169,7 @@
     // across every redirect hop, browser, and cache state.
     const EARTH_IMAGE_URL = 'assets/earth-blue-marble.jpg';
     const BUMP_IMAGE_URL = 'assets/earth-topology.png';
-    const OCEAN_TARGET_HUE = 0.51; // ~185deg, cyan-teal
-    const OCEAN_TARGET_SAT = 0.75;
+    const OCEAN_TARGET = [110, 220, 225]; // aqua/turquoise
     const OCEAN_BLEND = 0.85;
     const GREEN_TARGET = [70, 195, 85]; // vivid, brighter vegetation green
     const GREEN_BLEND = 0.5; // milder than ocean — keep some natural photo variation
@@ -182,45 +181,6 @@
         img.onerror = reject;
         img.src = url;
       });
-    }
-
-    function rgbToHsl(r, g, b) {
-      r /= 255;
-      g /= 255;
-      b /= 255;
-      const max = Math.max(r, g, b);
-      const min = Math.min(r, g, b);
-      const l = (max + min) / 2;
-      if (max === min) return [0, 0, l];
-      const d = max - min;
-      const s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
-      let h;
-      if (max === r) h = (g - b) / d + (g < b ? 6 : 0);
-      else if (max === g) h = (b - r) / d + 2;
-      else h = (r - g) / d + 4;
-      return [h / 6, s, l];
-    }
-
-    function hslToRgb(h, s, l) {
-      if (s === 0) {
-        const v = Math.round(l * 255);
-        return [v, v, v];
-      }
-      const hue2rgb = (p, q, t) => {
-        if (t < 0) t += 1;
-        if (t > 1) t -= 1;
-        if (t < 1 / 6) return p + (q - p) * 6 * t;
-        if (t < 1 / 2) return q;
-        if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
-        return p;
-      };
-      const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
-      const p = 2 * l - q;
-      return [
-        Math.round(hue2rgb(p, q, h + 1 / 3) * 255),
-        Math.round(hue2rgb(p, q, h) * 255),
-        Math.round(hue2rgb(p, q, h - 1 / 3) * 255),
-      ];
     }
 
     function tintOceanAndGreen(ctx, width, height) {
@@ -237,18 +197,10 @@
         const blueDominance = b - Math.max(r, g);
         const blueness = Math.max(0, Math.min(1, blueDominance / 25));
         if (blueness > 0) {
-          // Shift hue toward cyan-teal and boost saturation, but leave
-          // lightness alone — preserves the photo's own bathymetric-style
-          // depth gradient (shallow/bright vs. deep/dark) instead of
-          // crushing every ocean pixel toward one flat target color.
           const blend = blueness * OCEAN_BLEND;
-          const [h, s, l] = rgbToHsl(r, g, b);
-          const newHue = h + (OCEAN_TARGET_HUE - h) * blend;
-          const newSat = s + (OCEAN_TARGET_SAT - s) * blend;
-          const [nr, ng, nb] = hslToRgb(newHue, newSat, l);
-          data[i] = nr;
-          data[i + 1] = ng;
-          data[i + 2] = nb;
+          data[i] = Math.round(r + (OCEAN_TARGET[0] - r) * blend);
+          data[i + 1] = Math.round(g + (OCEAN_TARGET[1] - g) * blend);
+          data[i + 2] = Math.round(b + (OCEAN_TARGET[2] - b) * blend);
           continue; // a pixel is either water or land, never both
         }
 
@@ -293,15 +245,46 @@
     // ES module build instead: never assigned to window.THREE, so it can't
     // collide with globe.gl's own internal instance the way a global did.
     //
-    // Two layers for texture/detail: a few broad soft "masses" for large
-    // continuous formations, many smaller "wisps" for isolated scattered
-    // cover. Each blob is an ellipse (not a circle) with random rotation —
-    // some notably elongated, suggesting wind-shear streaking. Y position
-    // is biased toward the equatorial band (average of two random samples
-    // pulls toward the texture's vertical center) for higher density near
-    // the tropics, sparser toward the poles, echoing real convection
-    // patterns. Slight cool blue-grey tint rather than flat white.
-    function buildCloudLayer(count, sizeMin, sizeMax, opacity, streakChance) {
+    // Two layers for texture/detail. "Masses" (large continuous
+    // formations) are each built as a CLUSTER of several overlapping
+    // sub-blobs around a shared center, rather than one single ellipse —
+    // a lone ellipse always reads as a clean oval no matter how it's
+    // rotated/elongated; overlapping soft edges from many sub-blobs merge
+    // into an irregular, non-repeating composite silhouette instead.
+    // "Wisps" stay as individual small elongated blobs, matching the
+    // reference's "small, isolated wisps scattered individually." Some
+    // sub-blobs are notably elongated, suggesting wind-shear streaking. Y
+    // position is biased toward the equatorial band (average of two
+    // random samples pulls toward the texture's vertical center) for
+    // higher density near the tropics, sparser toward the poles. Slight
+    // cool blue-grey tint rather than flat white.
+    function buildCloudMasses(clusterCount, subBlobSize, opacity, streakChance) {
+      const blobs = [];
+      for (let c = 0; c < clusterCount; c++) {
+        const centerX = Math.random() * TEXTURE_WIDTH;
+        const centerY = ((Math.random() + Math.random()) / 2) * TEXTURE_HEIGHT;
+        const subCount = 6 + Math.floor(Math.random() * 5); // 6-10 overlapping sub-blobs
+        const spread = subBlobSize.max * 1.1;
+        for (let i = 0; i < subCount; i++) {
+          const rx = subBlobSize.min + Math.random() * (subBlobSize.max - subBlobSize.min);
+          const elongation = Math.random() < streakChance ? 0.2 + Math.random() * 0.25 : 0.5 + Math.random() * 0.5;
+          const ry = rx * elongation;
+          blobs.push({
+            x: centerX + (Math.random() - 0.5) * spread,
+            y: centerY + (Math.random() - 0.5) * spread * 0.55,
+            rx,
+            ry,
+            rotation: Math.random() * Math.PI,
+            // Per-sub-blob variance so the cluster doesn't read as one
+            // uniform density either.
+            opacity: opacity * (0.65 + Math.random() * 0.35),
+          });
+        }
+      }
+      return blobs;
+    }
+
+    function buildCloudWisps(count, sizeMin, sizeMax, opacity, streakChance) {
       const blobs = [];
       for (let i = 0; i < count; i++) {
         const rx = sizeMin + Math.random() * (sizeMax - sizeMin);
@@ -322,8 +305,8 @@
 
     // Built once — fixed cloud shapes, so regenerating the texture doesn't
     // make clouds visibly jump around.
-    const cloudMasses = buildCloudLayer(30, 70, 160, 0.6, 0.35); // large continuous formations, denser cores
-    const cloudWisps = buildCloudLayer(80, 15, 45, 0.4, 0.15); // small isolated scattered wisps
+    const cloudMasses = buildCloudMasses(14, { min: 35, max: 85 }, 0.6, 0.3); // large continuous formations
+    const cloudWisps = buildCloudWisps(80, 15, 45, 0.4, 0.15); // small isolated scattered wisps
 
     function drawCloudLayer(ctx, blobs) {
       blobs.forEach(({ x, y, rx, ry, rotation, opacity }) => {
