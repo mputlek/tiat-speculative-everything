@@ -169,7 +169,8 @@
     // across every redirect hop, browser, and cache state.
     const EARTH_IMAGE_URL = 'assets/earth-blue-marble.jpg';
     const BUMP_IMAGE_URL = 'assets/earth-topology.png';
-    const OCEAN_TARGET = [110, 220, 225]; // aqua/turquoise
+    const OCEAN_TARGET_HUE = 0.51; // ~185deg, cyan-teal
+    const OCEAN_TARGET_SAT = 0.75;
     const OCEAN_BLEND = 0.85;
     const GREEN_TARGET = [70, 195, 85]; // vivid, brighter vegetation green
     const GREEN_BLEND = 0.5; // milder than ocean — keep some natural photo variation
@@ -181,6 +182,45 @@
         img.onerror = reject;
         img.src = url;
       });
+    }
+
+    function rgbToHsl(r, g, b) {
+      r /= 255;
+      g /= 255;
+      b /= 255;
+      const max = Math.max(r, g, b);
+      const min = Math.min(r, g, b);
+      const l = (max + min) / 2;
+      if (max === min) return [0, 0, l];
+      const d = max - min;
+      const s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+      let h;
+      if (max === r) h = (g - b) / d + (g < b ? 6 : 0);
+      else if (max === g) h = (b - r) / d + 2;
+      else h = (r - g) / d + 4;
+      return [h / 6, s, l];
+    }
+
+    function hslToRgb(h, s, l) {
+      if (s === 0) {
+        const v = Math.round(l * 255);
+        return [v, v, v];
+      }
+      const hue2rgb = (p, q, t) => {
+        if (t < 0) t += 1;
+        if (t > 1) t -= 1;
+        if (t < 1 / 6) return p + (q - p) * 6 * t;
+        if (t < 1 / 2) return q;
+        if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
+        return p;
+      };
+      const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+      const p = 2 * l - q;
+      return [
+        Math.round(hue2rgb(p, q, h + 1 / 3) * 255),
+        Math.round(hue2rgb(p, q, h) * 255),
+        Math.round(hue2rgb(p, q, h - 1 / 3) * 255),
+      ];
     }
 
     function tintOceanAndGreen(ctx, width, height) {
@@ -197,10 +237,18 @@
         const blueDominance = b - Math.max(r, g);
         const blueness = Math.max(0, Math.min(1, blueDominance / 25));
         if (blueness > 0) {
+          // Shift hue toward cyan-teal and boost saturation, but leave
+          // lightness alone — preserves the photo's own bathymetric-style
+          // depth gradient (shallow/bright vs. deep/dark) instead of
+          // crushing every ocean pixel toward one flat target color.
           const blend = blueness * OCEAN_BLEND;
-          data[i] = Math.round(r + (OCEAN_TARGET[0] - r) * blend);
-          data[i + 1] = Math.round(g + (OCEAN_TARGET[1] - g) * blend);
-          data[i + 2] = Math.round(b + (OCEAN_TARGET[2] - b) * blend);
+          const [h, s, l] = rgbToHsl(r, g, b);
+          const newHue = h + (OCEAN_TARGET_HUE - h) * blend;
+          const newSat = s + (OCEAN_TARGET_SAT - s) * blend;
+          const [nr, ng, nb] = hslToRgb(newHue, newSat, l);
+          data[i] = nr;
+          data[i + 1] = ng;
+          data[i + 2] = nb;
           continue; // a pixel is either water or land, never both
         }
 
@@ -214,58 +262,6 @@
         }
       }
       ctx.putImageData(imageData, 0, 0);
-    }
-
-    // Clouds: composited directly into the same texture. A genuinely
-    // separate, independently-rotating cloud layer (its own transparent
-    // sphere in the three.js scene) was attempted but required loading a
-    // second copy of three.js alongside globe.gl's internal bundle — that
-    // broke globe.gl's own initialization entirely ("Globe is not
-    // defined"), so reverted in favor of this simpler, stable approach.
-    // Revisit if a version-compatible way to share globe.gl's internal
-    // THREE instance turns up.
-    //
-    // Two layers for more texture/detail than a single blob size: a few
-    // broad soft masses for base cover, plus many smaller, more-defined
-    // wisps layered on top. Each blob is an ellipse (not a circle) with a
-    // random rotation, avoiding the "uniform circular puffs" look.
-    function buildCloudLayer(count, sizeMin, sizeMax, opacity) {
-      const blobs = [];
-      for (let i = 0; i < count; i++) {
-        const rx = sizeMin + Math.random() * (sizeMax - sizeMin);
-        const ry = rx * (0.5 + Math.random() * 0.5);
-        blobs.push({
-          x: Math.random() * TEXTURE_WIDTH,
-          y: Math.random() * TEXTURE_HEIGHT,
-          rx,
-          ry,
-          rotation: Math.random() * Math.PI,
-          opacity,
-        });
-      }
-      return blobs;
-    }
-
-    // Built once — fixed cloud shapes, so regenerating the texture doesn't
-    // make clouds visibly jump around.
-    const cloudMasses = buildCloudLayer(30, 70, 160, 0.35); // broad, soft base cover
-    const cloudWisps = buildCloudLayer(80, 15, 45, 0.55); // smaller, more-defined detail
-
-    function drawCloudLayer(ctx, blobs) {
-      blobs.forEach(({ x, y, rx, ry, rotation, opacity }) => {
-        ctx.save();
-        ctx.translate(x, y);
-        ctx.rotate(rotation);
-        const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, Math.max(rx, ry));
-        gradient.addColorStop(0, `rgba(255, 255, 255, ${opacity})`);
-        gradient.addColorStop(0.6, `rgba(255, 255, 255, ${opacity * 0.5})`);
-        gradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
-        ctx.fillStyle = gradient;
-        ctx.beginPath();
-        ctx.ellipse(0, 0, rx, ry, 0, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.restore();
-      });
     }
 
     function generateGlobeTexture(earthImage, t) {
@@ -285,10 +281,98 @@
 
       tintOceanAndGreen(ctx, canvas.width, canvas.height);
 
+      return canvas.toDataURL('image/jpeg', 0.95);
+    }
+
+    // --- clouds: a genuinely separate, independently-rotating layer -----
+    // A prior attempt at this broke globe.gl entirely ("Globe is not
+    // defined") — root cause turned out to be pinning an external three.js
+    // to v0.155, well below globe.gl's actual peer requirement
+    // (>=0.179 <1). Versions in that range dropped the classic global/UMD
+    // script format, so this uses a scoped dynamic import() of the current
+    // ES module build instead: never assigned to window.THREE, so it can't
+    // collide with globe.gl's own internal instance the way a global did.
+    //
+    // Two layers for texture/detail: a few broad soft "masses" for large
+    // continuous formations, many smaller "wisps" for isolated scattered
+    // cover. Each blob is an ellipse (not a circle) with random rotation —
+    // some notably elongated, suggesting wind-shear streaking. Y position
+    // is biased toward the equatorial band (average of two random samples
+    // pulls toward the texture's vertical center) for higher density near
+    // the tropics, sparser toward the poles, echoing real convection
+    // patterns. Slight cool blue-grey tint rather than flat white.
+    function buildCloudLayer(count, sizeMin, sizeMax, opacity, streakChance) {
+      const blobs = [];
+      for (let i = 0; i < count; i++) {
+        const rx = sizeMin + Math.random() * (sizeMax - sizeMin);
+        const elongation = Math.random() < streakChance ? 0.2 + Math.random() * 0.25 : 0.5 + Math.random() * 0.5;
+        const ry = rx * elongation;
+        const biasedY = ((Math.random() + Math.random()) / 2) * TEXTURE_HEIGHT;
+        blobs.push({
+          x: Math.random() * TEXTURE_WIDTH,
+          y: biasedY,
+          rx,
+          ry,
+          rotation: Math.random() * Math.PI,
+          opacity,
+        });
+      }
+      return blobs;
+    }
+
+    // Built once — fixed cloud shapes, so regenerating the texture doesn't
+    // make clouds visibly jump around.
+    const cloudMasses = buildCloudLayer(30, 70, 160, 0.6, 0.35); // large continuous formations, denser cores
+    const cloudWisps = buildCloudLayer(80, 15, 45, 0.4, 0.15); // small isolated scattered wisps
+
+    function drawCloudLayer(ctx, blobs) {
+      blobs.forEach(({ x, y, rx, ry, rotation, opacity }) => {
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(rotation);
+        const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, Math.max(rx, ry));
+        // Slight cool blue-grey rather than flat white.
+        gradient.addColorStop(0, `rgba(232, 242, 248, ${opacity})`);
+        gradient.addColorStop(0.5, `rgba(232, 242, 248, ${opacity * 0.55})`);
+        gradient.addColorStop(1, 'rgba(232, 242, 248, 0)');
+        ctx.fillStyle = gradient;
+        ctx.beginPath();
+        ctx.ellipse(0, 0, rx, ry, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      });
+    }
+
+    function buildCloudsCanvasTexture() {
+      const canvas = document.createElement('canvas');
+      canvas.width = TEXTURE_WIDTH;
+      canvas.height = TEXTURE_HEIGHT;
+      const ctx = canvas.getContext('2d');
+      // Left transparent (no fill) — only the cloud blobs are opaque, so
+      // the terrain/ocean sphere beneath shows through everywhere else,
+      // and faintly through the blobs' own semi-transparent edges too.
       drawCloudLayer(ctx, cloudMasses);
       drawCloudLayer(ctx, cloudWisps);
+      return canvas;
+    }
 
-      return canvas.toDataURL('image/jpeg', 0.95);
+    async function buildCloudsLayer(scene) {
+      const THREE = await import('https://unpkg.com/three/build/three.module.js');
+      const texture = new THREE.CanvasTexture(buildCloudsCanvasTexture());
+      const geometry = new THREE.SphereGeometry(GLOBE_RADIUS * 1.008, 75, 75);
+      const material = new THREE.MeshPhongMaterial({
+        map: texture,
+        transparent: true,
+        opacity: 0.9,
+        depthWrite: false,
+        // Brightens the terrain beneath rather than flatly occluding it in
+        // thinner areas — reads closer to the reference's "screen/add"
+        // style blending than normal alpha compositing would.
+        blending: THREE.AdditiveBlending,
+      });
+      const mesh = new THREE.Mesh(geometry, material);
+      scene.add(mesh);
+      return mesh;
     }
 
     // --- mycelium thread network ------------------------------------
@@ -394,9 +478,22 @@
     globe.globeMaterial().bumpScale = 10;
     // Glossy/wet look on the whole surface (a true ocean-only specular
     // would need a specular map masking land out — reasonable
-    // simplification for now).
-    globe.globeMaterial().specular.set('#6a86b0');
-    globe.globeMaterial().shininess = 15;
+    // simplification for now). Near-white specular + higher shininess for
+    // a more visible "sun glint" highlight rather than a subtle sheen.
+    globe.globeMaterial().specular.set('#dff6fa');
+    globe.globeMaterial().shininess = 25;
+
+    // Best-effort — see the clouds section above for why this is isolated
+    // in its own try/catch rather than allowed to throw into the outer
+    // setUpGlobe try/catch: a clouds-layer failure shouldn't take down the
+    // terrain/atmosphere/arcs that already rendered successfully above.
+    const GLOBE_RADIUS = 100; // three-globe's internal globe radius convention
+    let cloudsMesh = null;
+    try {
+      cloudsMesh = await buildCloudsLayer(globe.scene());
+    } catch (err) {
+      console.error('Clouds layer failed, continuing without it:', err);
+    }
 
     globe.controls().autoRotate = true;
     globe.controls().autoRotateSpeed = 1.2;
@@ -434,6 +531,14 @@
       }
       globe.arcColor(() => lerpColorAlpha(ARC_COLOR_DIM, ARC_COLOR_GLOW, currentT, 0.35, 0.95));
       globe.arcStroke(0.15 + currentT * 0.35);
+
+      // Clouds drift at their own slow, independent rate — separate from
+      // the camera's auto-rotate orbit, which leaves the terrain itself
+      // stationary in world space. Guarded since the clouds layer is
+      // best-effort and may not exist if it failed to load.
+      if (cloudsMesh) {
+        cloudsMesh.rotation.y += 0.0006;
+      }
 
       requestAnimationFrame(animateGlobe);
     }
