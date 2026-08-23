@@ -151,23 +151,6 @@
       });
     }
 
-    function buildCloudBlobs() {
-      const blobs = [];
-      const cloudCount = 30;
-      for (let i = 0; i < cloudCount; i++) {
-        blobs.push({
-          x: Math.random() * TEXTURE_WIDTH,
-          y: Math.random() * TEXTURE_HEIGHT,
-          r: 60 + Math.random() * 140,
-        });
-      }
-      return blobs;
-    }
-
-    // Built once — fixed cloud shapes, so regenerating the texture doesn't
-    // make clouds visibly jump around.
-    const cloudBlobs = buildCloudBlobs();
-
     function generateGlobeTexture(earthImage, t) {
       const canvas = document.createElement('canvas');
       canvas.width = TEXTURE_WIDTH;
@@ -183,18 +166,55 @@
       ctx.drawImage(earthImage, 0, 0, canvas.width, canvas.height);
       ctx.filter = 'none';
 
-      const cloudOpacity = 0.45;
-      cloudBlobs.forEach(({ x, y, r }) => {
+      return canvas.toDataURL('image/jpeg', 0.95);
+    }
+
+    // --- clouds: a genuinely separate, independently-rotating layer -----
+    // Previously composited directly into the Earth texture above; moved
+    // to its own slightly-larger transparent sphere in the three.js scene
+    // so clouds visibly drift at their own rate rather than being fixed to
+    // the terrain (per reference: "clouds appear to drift/wisp
+    // independently"). Requires the standalone THREE global loaded in
+    // index.html — globe.gl bundles its own internal copy of three.js but
+    // doesn't expose it, so a second copy is needed for custom scene
+    // objects like this.
+    const GLOBE_RADIUS = 100; // three-globe's internal globe radius convention
+
+    function buildCloudsTexture() {
+      const canvas = document.createElement('canvas');
+      canvas.width = TEXTURE_WIDTH;
+      canvas.height = TEXTURE_HEIGHT;
+      const ctx = canvas.getContext('2d');
+      // Left transparent (no fill) — only the cloud blobs themselves are
+      // opaque, so the globe surface below shows through everywhere else.
+      const cloudCount = 40;
+      for (let i = 0; i < cloudCount; i++) {
+        const x = Math.random() * canvas.width;
+        const y = Math.random() * canvas.height;
+        const r = 50 + Math.random() * 120;
         const gradient = ctx.createRadialGradient(x, y, 0, x, y, r);
-        gradient.addColorStop(0, `rgba(255, 255, 255, ${cloudOpacity})`);
+        gradient.addColorStop(0, 'rgba(255, 255, 255, 0.75)');
         gradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
         ctx.fillStyle = gradient;
         ctx.beginPath();
         ctx.arc(x, y, r, 0, Math.PI * 2);
         ctx.fill();
-      });
+      }
+      return canvas;
+    }
 
-      return canvas.toDataURL('image/jpeg', 0.95);
+    function buildCloudsLayer(scene) {
+      const texture = new THREE.CanvasTexture(buildCloudsTexture());
+      const geometry = new THREE.SphereGeometry(GLOBE_RADIUS * 1.008, 75, 75);
+      const material = new THREE.MeshPhongMaterial({
+        map: texture,
+        transparent: true,
+        opacity: 0.85,
+        depthWrite: false,
+      });
+      const mesh = new THREE.Mesh(geometry, material);
+      scene.add(mesh);
+      return mesh;
     }
 
     // --- mycelium thread network ------------------------------------
@@ -285,7 +305,7 @@
     const globe = Globe()(document.getElementById('globeViz'))
       .globeImageUrl(generateGlobeTexture(earthBaseImage, initialT))
       .bumpImageUrl(BUMP_IMAGE_URL)
-      .backgroundColor('#0a1a2e')
+      .backgroundColor('#f3e6eb')
       .showAtmosphere(true)
       .arcAltitude(0.05)
       .arcDashLength(0.4)
@@ -298,6 +318,13 @@
     // cause of the missing background/atmosphere/arcs). It's a real
     // property on the underlying three.js material, set directly instead.
     globe.globeMaterial().bumpScale = 10;
+    // Glossy/wet look on the whole surface (a true ocean-only specular
+    // would need a specular map masking land out — reasonable
+    // simplification for now).
+    globe.globeMaterial().specular.set('#6a86b0');
+    globe.globeMaterial().shininess = 15;
+
+    const cloudsMesh = buildCloudsLayer(globe.scene());
 
     globe.controls().autoRotate = true;
     globe.controls().autoRotateSpeed = 1.2;
@@ -335,6 +362,11 @@
       }
       globe.arcColor(() => lerpColorAlpha(ARC_COLOR_DIM, ARC_COLOR_GLOW, currentT, 0.35, 0.95));
       globe.arcStroke(0.15 + currentT * 0.35);
+
+      // Clouds drift at their own slow, independent rate — separate from
+      // the camera's auto-rotate orbit, which leaves the terrain itself
+      // stationary in world space.
+      cloudsMesh.rotation.y += 0.0006;
 
       requestAnimationFrame(animateGlobe);
     }

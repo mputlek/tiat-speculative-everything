@@ -25,6 +25,11 @@
   </div>
 
   <script src="https://cdn.ably.com/lib/ably.min-2.js"></script>
+  <!-- Pinned: recent three.js releases dropped the classic global/UMD
+       build (three.min.js) in favor of ES modules only. Pinning to a
+       version that still ships it avoids needing <script type="module">
+       just to get a THREE global for the custom clouds layer below. -->
+  <script src="//unpkg.com/three@0.155.0/build/three.min.js"></script>
   <script src="//unpkg.com/globe.gl"></script>
   <script src="../shared/config.js"></script>
   <script src="script.js"></script>
