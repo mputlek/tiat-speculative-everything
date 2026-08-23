@@ -1,7 +1,8 @@
-/* Background, typography, and the Animal Crossing palette pass have landed
-   (globe color lerp, atmosphere glow, health bar, UI accents). The mycelium
-   thread visuals and custom globe texture are still placeholder and come
-   next. */
+/* Realistic-Earth direction (per collaborator request) — dark space
+   background replaces the Animal Crossing beige, which now lives on the
+   `animal-crossing` branch. Mycelium thread network, health bar, and
+   growth mechanic are unchanged from that branch; only the visual skin
+   (globe texture, atmosphere colors, page chrome contrast) differs. */
 
 * {
   box-sizing: border-box;
@@ -11,9 +12,9 @@ html, body {
   margin: 0;
   height: 100%;
   overflow: hidden;
-  background: #f3e6eb;
+  background: radial-gradient(circle at center, #1c3a5e 0%, #0a1a2e 100%);
   font-family: 'Quicksand', system-ui, -apple-system, sans-serif;
-  color: #4a3b36;
+  color: #eef2f6;
 }
 
 #globeViz {
@@ -34,28 +35,29 @@ html, body {
   font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: #8f8378;
+  color: #9fb0c0;
   margin: 0 0 4px;
 }
 
 .status.connected {
-  color: #3faf87;
+  color: #4fd1a5;
 }
 
 .status.error {
-  color: #d97757;
+  color: #e2725b;
 }
 
 .stage {
   font-size: 1.6rem;
   font-weight: 700;
   margin: 0 0 12px;
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.4);
 }
 
 .healthBar {
   width: 100%;
   height: 14px;
-  background: rgba(74, 59, 54, 0.12);
+  background: rgba(255, 255, 255, 0.15);
   border-radius: 7px;
   overflow: hidden;
 }
@@ -63,12 +65,12 @@ html, body {
 .healthBarFill {
   height: 100%;
   width: 0%;
-  background: #a8a190;
+  background: #8c969e;
   transition: width 1.2s ease-out, background-color 1.2s ease-out;
 }
 
 .healthCount {
   font-size: 0.85rem;
-  color: #6b5d58;
+  color: #b8c4cf;
   margin: 8px 0 0;
 }

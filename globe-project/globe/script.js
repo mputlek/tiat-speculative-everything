@@ -1,4 +1,4 @@
-(function () {
+(async function () {
   const config = window.FUNGUY_CONFIG;
   const statusEl = document.getElementById('status');
   const stageEl = document.getElementById('stage');
@@ -27,27 +27,27 @@
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   }
 
-  // --- Animal Crossing-inspired palette: color lerp + bar + stage label --
-  // Dormant: muted dusty pastel (dim, not dead). Thriving: saturated mint.
-  // The atmosphere lerps separately toward a soft lavender-pink glow rather
-  // than mirroring the surface color, per the warm/pastel direction (no
-  // cold sci-fi blue). This is still a stand-in for the mycelium
-  // thread/bioluminescence treatment planned later.
-  const DORMANT_COLOR = [168, 161, 144]; // #a8a190 dusty sage-taupe
+  // --- palette: mycelium threads + atmosphere -----------------------------
+  // Dormant: muted, barely-there. Thriving: saturated glowing mint. Used
+  // for the 2D health bar and the mycelium thread arcs, independent of the
+  // realistic Earth texture below (see generateGlobeTexture).
+  const DORMANT_COLOR = [140, 150, 158]; // #8c969e muted cool grey
   const THRIVING_COLOR = [79, 209, 165]; // #4fd1a5 saturated mint
 
-  const ATMOSPHERE_DORMANT = [216, 207, 197]; // #d8cfc5 barely-there warm glow
-  const ATMOSPHERE_THRIVING = [232, 184, 222]; // #e8b8de soft lavender-pink
-
-  // Land color only — ocean stays a fixed blue regardless of health (see
-  // generateGlobeTexture below). Bare/damaged brown regrows into forest
-  // green as the mycelium network spreads.
-  const LAND_DORMANT = [180, 140, 100]; // #b48c64 bare warm brown
-  const LAND_THRIVING = [100, 180, 120]; // #64b478 soft forest green
+  // Realistic blue atmosphere glow — dim/thin when damaged, brighter and
+  // thicker when healed.
+  const ATMOSPHERE_DORMANT = [120, 140, 160]; // #7892a0 dim grey-blue
+  const ATMOSPHERE_THRIVING = [100, 180, 240]; // #64b4f0 vivid sky blue
 
   function lerpColor(a, b, t) {
     const c = a.map((v, i) => Math.round(v + (b[i] - v) * t));
     return `rgb(${c[0]}, ${c[1]}, ${c[2]})`;
+  }
+
+  function lerpColorAlpha(a, b, t, alphaMin, alphaMax) {
+    const c = a.map((v, i) => Math.round(v + (b[i] - v) * t));
+    const alpha = alphaMin + (alphaMax - alphaMin) * t;
+    return `rgba(${c[0]}, ${c[1]}, ${c[2]}, ${alpha.toFixed(2)})`;
   }
 
   function stageForHealth(h) {
@@ -56,70 +56,71 @@
     return 'Thriving';
   }
 
-  // Procedurally generated placeholder surface texture: fixed ocean (blue)
-  // + landmass shapes whose fill color lerps brown -> green as healthValue
-  // rises, standing in for forests regrowing on the land. The landmass
-  // *shape* (landBlobs, built once below) never changes — only the fill
-  // color is redrawn — so regenerating the texture as health changes
-  // doesn't make continents visibly jitter/reshuffle.
-  const TEXTURE_WIDTH = 1024;
-  const TEXTURE_HEIGHT = 512;
-  const OCEAN_COLOR = '#8fc7e8';
+  // --- realistic Earth texture ---------------------------------------
+  // Real photographic Earth (three-globe's bundled Blue Marble asset) with
+  // a terrain bump map for relief shading, desaturated toward Dormant and
+  // full color toward Thriving, plus soft cloud wisps composited directly
+  // into the same canvas (avoids needing a separate rotating cloud-layer
+  // mesh in the three.js scene). Regenerated only on a 5% health step, not
+  // every animation frame, since drawing a full-res photo is far more
+  // expensive than a plain color fill.
+  const TEXTURE_WIDTH = 2048;
+  const TEXTURE_HEIGHT = 1024;
+  const EARTH_IMAGE_URL = '//unpkg.com/three-globe/example/img/earth-blue-marble.jpg';
+  const BUMP_IMAGE_URL = '//unpkg.com/three-globe/example/img/earth-topology.png';
 
-  // Loose, made-up continent positions (not geographically precise) purely
-  // to give the globe a recognizable "this is Earth" silhouette until real
-  // art replaces this.
-  const CONTINENT_SEEDS = [
-    { lat: 45, lng: -100 }, // North America
-    { lat: -15, lng: -60 }, // South America
-    { lat: 50, lng: 15 }, // Europe
-    { lat: 5, lng: 20 }, // Africa
-    { lat: 45, lng: 90 }, // Asia
-    { lat: -25, lng: 135 }, // Australia
-  ];
-
-  function latLngToXY(lat, lng, width, height) {
-    const x = ((lng + 180) / 360) * width;
-    const y = ((90 - lat) / 180) * height;
-    return { x, y };
+  function loadImage(url) {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = () => resolve(img);
+      img.onerror = reject;
+      img.src = url;
+    });
   }
 
-  function buildLandBlobs() {
+  function buildCloudBlobs() {
     const blobs = [];
-    CONTINENT_SEEDS.forEach(({ lat, lng }) => {
-      const { x, y } = latLngToXY(lat, lng, TEXTURE_WIDTH, TEXTURE_HEIGHT);
-      const blobCount = 7 + Math.floor(Math.random() * 4);
-      for (let i = 0; i < blobCount; i++) {
-        blobs.push({
-          x: x + (Math.random() - 0.5) * 90,
-          y: y + (Math.random() - 0.5) * 60,
-          r: 25 + Math.random() * 35,
-        });
-      }
-    });
+    const cloudCount = 30;
+    for (let i = 0; i < cloudCount; i++) {
+      blobs.push({
+        x: Math.random() * TEXTURE_WIDTH,
+        y: Math.random() * TEXTURE_HEIGHT,
+        r: 60 + Math.random() * 140,
+      });
+    }
     return blobs;
   }
 
-  // Built once at load — this is the fixed "coastline" shape.
-  const landBlobs = buildLandBlobs();
+  // Built once — fixed cloud shapes, so regenerating the texture doesn't
+  // make clouds visibly jump around.
+  const cloudBlobs = buildCloudBlobs();
 
-  function generateGlobeTexture(landColor) {
+  function generateGlobeTexture(earthImage, t) {
     const canvas = document.createElement('canvas');
     canvas.width = TEXTURE_WIDTH;
     canvas.height = TEXTURE_HEIGHT;
     const ctx = canvas.getContext('2d');
 
-    ctx.fillStyle = OCEAN_COLOR;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    // Damaged (t=0): desaturated and dim. Healed (t=1): full vivid color.
+    const saturation = 20 + t * 80;
+    const brightness = 70 + t * 30;
+    ctx.filter = `saturate(${saturation}%) brightness(${brightness}%)`;
+    ctx.drawImage(earthImage, 0, 0, canvas.width, canvas.height);
+    ctx.filter = 'none';
 
-    ctx.fillStyle = landColor;
-    landBlobs.forEach(({ x, y, r }) => {
+    const cloudOpacity = 0.45;
+    cloudBlobs.forEach(({ x, y, r }) => {
+      const gradient = ctx.createRadialGradient(x, y, 0, x, y, r);
+      gradient.addColorStop(0, `rgba(255, 255, 255, ${cloudOpacity})`);
+      gradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+      ctx.fillStyle = gradient;
       ctx.beginPath();
       ctx.arc(x, y, r, 0, Math.PI * 2);
       ctx.fill();
     });
 
-    return canvas.toDataURL('image/png');
+    return canvas.toDataURL('image/jpeg', 0.85);
   }
 
   // --- mycelium thread network ---------------------------------------
@@ -215,12 +216,6 @@
 
   const myceliumEdges = buildMyceliumNetwork();
 
-  function lerpColorAlpha(a, b, t, alphaMin, alphaMax) {
-    const c = a.map((v, i) => Math.round(v + (b[i] - v) * t));
-    const alpha = alphaMin + (alphaMax - alphaMin) * t;
-    return `rgba(${c[0]}, ${c[1]}, ${c[2]}, ${alpha.toFixed(2)})`;
-  }
-
   function render() {
     const t = state.healthValue / HEALTH_MAX;
     const color = lerpColor(DORMANT_COLOR, THRIVING_COLOR, t);
@@ -242,11 +237,15 @@
     render();
   }
 
-  // --- globe (placeholder procedural texture; mycelium threads below) -----
-  const initialLandColor = lerpColor(LAND_DORMANT, LAND_THRIVING, state.healthValue / HEALTH_MAX);
+  // --- globe ---------------------------------------------------------
+  const earthBaseImage = await loadImage(EARTH_IMAGE_URL);
+  const initialT = state.healthValue / HEALTH_MAX;
+
   const globe = Globe()(document.getElementById('globeViz'))
-    .globeImageUrl(generateGlobeTexture(initialLandColor))
-    .backgroundColor('#f3e6eb')
+    .globeImageUrl(generateGlobeTexture(earthBaseImage, initialT))
+    .bumpImageUrl(BUMP_IMAGE_URL)
+    .bumpScale(10)
+    .backgroundColor('#0a1a2e')
     .showAtmosphere(true)
     .arcAltitude(0.05)
     .arcDashLength(0.4)
@@ -255,8 +254,7 @@
 
   // White so the globe material doesn't tint the texture — three.js
   // multiplies map texture x material color, and generateGlobeTexture()
-  // already encodes final land/ocean colors directly, so anything other
-  // than white here would wash out the ocean's blue.
+  // already encodes final colors directly via canvas filters.
   globe.globeMaterial().color.set('#ffffff');
 
   // Slow ambient auto-rotate so the display reads as alive even when no
@@ -268,17 +266,17 @@
 
   // Continuously eases the atmosphere glow toward healthValue's target
   // (rather than snapping on each message) and adds a slow idle
-  // "breathing" pulse to its altitude — living-system pacing, not a
-  // static image or a tech-style instant jump. The globe's land texture is
-  // regenerated on the same easing curve, just throttled (see textureBucket
-  // below) since redrawing a canvas is far more expensive than a color set.
+  // "breathing" pulse to its altitude. The Earth texture (color grading +
+  // clouds) is regenerated on the same easing curve, just throttled (see
+  // textureBucket below) since redrawing a full-res photo canvas is far
+  // more expensive than a color set.
   const BASE_ATMOSPHERE_ALTITUDE = 0.2;
   const PULSE_AMPLITUDE = 0.02;
   const PULSE_PERIOD_MS = 6000;
-  const ARC_COLOR_DIM = [168, 161, 144]; // matches dormant surface tone
+  const ARC_COLOR_DIM = [140, 150, 158]; // matches dormant tone
   const ARC_COLOR_GLOW = [130, 255, 210]; // vivid bright mint glow
   const TEXTURE_STEPS = 20; // 5% granularity
-  let currentT = state.healthValue / HEALTH_MAX;
+  let currentT = initialT;
   let lastRevealCount = -1;
   let lastTextureBucket = Math.floor(currentT * TEXTURE_STEPS);
 
@@ -292,13 +290,12 @@
     globe.atmosphereColor(atmosphereColor);
     globe.atmosphereAltitude(BASE_ATMOSPHERE_ALTITUDE + pulse);
 
-    // Regrow forests on the land as health rises — regenerate the texture
-    // only when currentT crosses a new 5% step, not every frame.
+    // Regrade the Earth texture (desaturated -> full color) as health
+    // rises — regenerate only when currentT crosses a new 5% step.
     const textureBucket = Math.floor(currentT * TEXTURE_STEPS);
     if (textureBucket !== lastTextureBucket) {
       lastTextureBucket = textureBucket;
-      const landColor = lerpColor(LAND_DORMANT, LAND_THRIVING, currentT);
-      globe.globeImageUrl(generateGlobeTexture(landColor));
+      globe.globeImageUrl(generateGlobeTexture(earthBaseImage, currentT));
     }
 
     // Reveal threads gradually as currentT eases upward — sparse/no
