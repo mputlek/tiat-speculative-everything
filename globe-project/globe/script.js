@@ -125,8 +125,14 @@
     // Marble's ocean is a duller navy by default), soft cloud wisps
     // composited into the same canvas. Regenerated only on a 5% health
     // step, not every animation frame.
-    const TEXTURE_WIDTH = 1024;
-    const TEXTURE_HEIGHT = 512;
+    // Matches the bump map's native resolution (2048x1024) — the earlier
+    // 1024x512 (halved for perceived perf headroom around the per-pixel
+    // ocean-tint loop) threw away real detail from the 4096x2048 source
+    // photo and read visibly soft/blurry. The tint loop is still cheap at
+    // this size (~2M simple pixel ops, well under render-blocking territory
+    // for an operation that only fires ~20x per session, not per frame).
+    const TEXTURE_WIDTH = 2048;
+    const TEXTURE_HEIGHT = 1024;
     // Self-hosted rather than loaded cross-origin from a CDN: canvas
     // getImageData()/toDataURL() below require the source image to be
     // taint-free, and same-origin assets are taint-free by web platform
@@ -178,7 +184,7 @@
         blobs.push({
           x: Math.random() * TEXTURE_WIDTH,
           y: Math.random() * TEXTURE_HEIGHT,
-          r: 30 + Math.random() * 70,
+          r: 60 + Math.random() * 140,
         });
       }
       return blobs;
@@ -214,7 +220,7 @@
         ctx.fill();
       });
 
-      return canvas.toDataURL('image/jpeg', 0.85);
+      return canvas.toDataURL('image/jpeg', 0.95);
     }
 
     // --- mycelium thread network ------------------------------------
