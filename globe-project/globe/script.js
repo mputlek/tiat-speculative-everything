@@ -50,6 +50,41 @@
     return 'Thriving';
   }
 
+  // Procedurally generated placeholder surface texture — soft, feathered
+  // blobs standing in for landmass/mycelium-colony shapes until real
+  // artwork replaces this. Drawn in a light, low-contrast neutral tone on
+  // purpose: three.js multiplies this texture against globeMaterial's
+  // color, so keeping it pale lets the health-driven Dormant/Thriving tint
+  // (see render loop below) still read as the globe's dominant color —
+  // this canvas only adds gentle surface relief, not the actual color.
+  function generateGlobeTexture() {
+    const canvas = document.createElement('canvas');
+    canvas.width = 1024;
+    canvas.height = 512;
+    const ctx = canvas.getContext('2d');
+
+    ctx.fillStyle = '#ede8de';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    const blobCount = 55;
+    for (let i = 0; i < blobCount; i++) {
+      const x = Math.random() * canvas.width;
+      const y = Math.random() * canvas.height;
+      const r = 30 + Math.random() * 70;
+
+      const gradient = ctx.createRadialGradient(x, y, 0, x, y, r);
+      gradient.addColorStop(0, 'rgba(216, 207, 192, 0.55)');
+      gradient.addColorStop(1, 'rgba(216, 207, 192, 0)');
+
+      ctx.fillStyle = gradient;
+      ctx.beginPath();
+      ctx.arc(x, y, r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    return canvas.toDataURL('image/png');
+  }
+
   function render() {
     const t = state.healthValue / HEALTH_MAX;
     const color = lerpColor(DORMANT_COLOR, THRIVING_COLOR, t);
@@ -71,8 +106,9 @@
     render();
   }
 
-  // --- globe (placeholder: plain colored sphere, no texture/threads yet) -
+  // --- globe (placeholder procedural texture; mycelium threads come next) -
   const globe = Globe()(document.getElementById('globeViz'))
+    .globeImageUrl(generateGlobeTexture())
     .backgroundColor('#f3e6eb')
     .showAtmosphere(true);
 
