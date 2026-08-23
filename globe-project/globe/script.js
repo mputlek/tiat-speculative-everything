@@ -245,117 +245,24 @@
     // ES module build instead: never assigned to window.THREE, so it can't
     // collide with globe.gl's own internal instance the way a global did.
     //
-    // Two layers for texture/detail. "Masses" (large continuous
-    // formations) are each built as a CLUSTER of many thin, elongated
-    // streak-blobs around a shared center — a single soft ellipse always
-    // reads as a smooth uniform "blob" no matter how it's clustered;
-    // making the individual sub-shapes genuinely thin and directional
-    // (like brush strokes, not puffs) plus an off-center gradient origin
-    // per shape (dense on one end, tapering to nothing on the other,
-    // rather than a uniform ring of softness) is what actually reads as
-    // "wispy." "Wisps" are individually-scattered versions of the same
-    // thin streak shape. Y position is biased toward the equatorial band
-    // (average of two random samples pulls toward the texture's vertical
-    // center) for higher density near the tropics. Slight cool blue-grey
-    // tint rather than flat white.
-    function buildCloudMasses(clusterCount, subBlobSize, opacity) {
-      const blobs = [];
-      for (let c = 0; c < clusterCount; c++) {
-        const centerX = Math.random() * TEXTURE_WIDTH;
-        const centerY = ((Math.random() + Math.random()) / 2) * TEXTURE_HEIGHT;
-        const subCount = 12 + Math.floor(Math.random() * 10); // 12-21 thin streaks
-        const spread = subBlobSize.max * 1.6;
-        for (let i = 0; i < subCount; i++) {
-          const length = subBlobSize.min + Math.random() * (subBlobSize.max - subBlobSize.min);
-          const thickness = length * (0.06 + Math.random() * 0.12); // genuinely thin, not oval
-          blobs.push({
-            x: centerX + (Math.random() - 0.5) * spread,
-            y: centerY + (Math.random() - 0.5) * spread * 0.5,
-            rx: length,
-            ry: thickness,
-            rotation: Math.random() * Math.PI,
-            // A few denser "cores" per cluster, most sub-blobs faint —
-            // matches "dense opaque cores fading to soft wisps," not a
-            // uniform-density cluster.
-            opacity: i < 2 ? opacity : opacity * (0.2 + Math.random() * 0.35),
-          });
-        }
-      }
-      return blobs;
-    }
-
-    function buildCloudWisps(count, sizeMin, sizeMax, opacity) {
-      const blobs = [];
-      for (let i = 0; i < count; i++) {
-        const length = sizeMin + Math.random() * (sizeMax - sizeMin);
-        const thickness = length * (0.08 + Math.random() * 0.15);
-        const biasedY = ((Math.random() + Math.random()) / 2) * TEXTURE_HEIGHT;
-        blobs.push({
-          x: Math.random() * TEXTURE_WIDTH,
-          y: biasedY,
-          rx: length,
-          ry: thickness,
-          rotation: Math.random() * Math.PI,
-          opacity: opacity * (0.5 + Math.random() * 0.5),
-        });
-      }
-      return blobs;
-    }
-
-    // Built once — fixed cloud shapes, so regenerating the texture doesn't
-    // make clouds visibly jump around.
-    const cloudMasses = buildCloudMasses(14, { min: 40, max: 110 }, 0.7); // large continuous formations
-    const cloudWisps = buildCloudWisps(100, 20, 60, 0.45); // small isolated scattered wisps
-
-    function drawCloudLayer(ctx, blobs) {
-      blobs.forEach(({ x, y, rx, ry, rotation, opacity }) => {
-        ctx.save();
-        ctx.translate(x, y);
-        ctx.rotate(rotation);
-        // Gradient origin offset toward one end of the streak rather than
-        // centered — dense/opaque at that end, tapering through to fully
-        // transparent at the other, like a wisp trailing off in the wind
-        // rather than a symmetric soft-edged puff.
-        const offsetX = rx * 0.4;
-        const gradient = ctx.createRadialGradient(offsetX, 0, 0, offsetX, 0, rx * 1.3);
-        gradient.addColorStop(0, `rgba(232, 242, 248, ${opacity})`);
-        gradient.addColorStop(0.3, `rgba(232, 242, 248, ${opacity * 0.5})`);
-        gradient.addColorStop(0.65, `rgba(232, 242, 248, ${opacity * 0.15})`);
-        gradient.addColorStop(1, 'rgba(232, 242, 248, 0)');
-        ctx.fillStyle = gradient;
-        ctx.beginPath();
-        ctx.ellipse(0, 0, rx, ry, 0, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.restore();
-      });
-    }
-
-    function buildCloudsCanvasTexture() {
-      const canvas = document.createElement('canvas');
-      canvas.width = TEXTURE_WIDTH;
-      canvas.height = TEXTURE_HEIGHT;
-      const ctx = canvas.getContext('2d');
-      // Left transparent (no fill) — only the cloud blobs are opaque, so
-      // the terrain/ocean sphere beneath shows through everywhere else,
-      // and faintly through the blobs' own semi-transparent edges too.
-      drawCloudLayer(ctx, cloudMasses);
-      drawCloudLayer(ctx, cloudWisps);
-      return canvas;
-    }
+    // Uses a real cloud texture with genuine alpha transparency (the
+    // standard asset for this technique across Globe.gl/three-globe
+    // examples, originally from the webgl-earth project) rather than
+    // hand-drawn canvas shapes — actual satellite cloud data reads as
+    // properly wispy in a way procedural shapes couldn't quite match.
+    // Self-hosted alongside the Earth/bump textures rather than loaded
+    // from a third party for the same reliability reasons.
+    const CLOUDS_IMAGE_URL = 'assets/clouds.png';
 
     async function buildCloudsLayer(scene) {
       const THREE = await import('https://unpkg.com/three/build/three.module.js');
-      const texture = new THREE.CanvasTexture(buildCloudsCanvasTexture());
-      const geometry = new THREE.SphereGeometry(GLOBE_RADIUS * 1.008, 75, 75);
+      const texture = await new THREE.TextureLoader().loadAsync(CLOUDS_IMAGE_URL);
+      const geometry = new THREE.SphereGeometry(GLOBE_RADIUS * 1.004, 75, 75);
       const material = new THREE.MeshPhongMaterial({
         map: texture,
         transparent: true,
-        opacity: 0.9,
+        opacity: 0.85,
         depthWrite: false,
-        // Brightens the terrain beneath rather than flatly occluding it in
-        // thinner areas — reads closer to the reference's "screen/add"
-        // style blending than normal alpha compositing would.
-        blending: THREE.AdditiveBlending,
       });
       const mesh = new THREE.Mesh(geometry, material);
       scene.add(mesh);
