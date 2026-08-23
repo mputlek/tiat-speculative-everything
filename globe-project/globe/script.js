@@ -246,58 +246,57 @@
     // collide with globe.gl's own internal instance the way a global did.
     //
     // Two layers for texture/detail. "Masses" (large continuous
-    // formations) are each built as a CLUSTER of several overlapping
-    // sub-blobs around a shared center, rather than one single ellipse —
-    // a lone ellipse always reads as a clean oval no matter how it's
-    // rotated/elongated; overlapping soft edges from many sub-blobs merge
-    // into an irregular, non-repeating composite silhouette instead.
-    // "Wisps" stay as individual small elongated blobs, matching the
-    // reference's "small, isolated wisps scattered individually." Some
-    // sub-blobs are notably elongated, suggesting wind-shear streaking. Y
-    // position is biased toward the equatorial band (average of two
-    // random samples pulls toward the texture's vertical center) for
-    // higher density near the tropics, sparser toward the poles. Slight
-    // cool blue-grey tint rather than flat white.
-    function buildCloudMasses(clusterCount, subBlobSize, opacity, streakChance) {
+    // formations) are each built as a CLUSTER of many thin, elongated
+    // streak-blobs around a shared center — a single soft ellipse always
+    // reads as a smooth uniform "blob" no matter how it's clustered;
+    // making the individual sub-shapes genuinely thin and directional
+    // (like brush strokes, not puffs) plus an off-center gradient origin
+    // per shape (dense on one end, tapering to nothing on the other,
+    // rather than a uniform ring of softness) is what actually reads as
+    // "wispy." "Wisps" are individually-scattered versions of the same
+    // thin streak shape. Y position is biased toward the equatorial band
+    // (average of two random samples pulls toward the texture's vertical
+    // center) for higher density near the tropics. Slight cool blue-grey
+    // tint rather than flat white.
+    function buildCloudMasses(clusterCount, subBlobSize, opacity) {
       const blobs = [];
       for (let c = 0; c < clusterCount; c++) {
         const centerX = Math.random() * TEXTURE_WIDTH;
         const centerY = ((Math.random() + Math.random()) / 2) * TEXTURE_HEIGHT;
-        const subCount = 6 + Math.floor(Math.random() * 5); // 6-10 overlapping sub-blobs
-        const spread = subBlobSize.max * 1.1;
+        const subCount = 12 + Math.floor(Math.random() * 10); // 12-21 thin streaks
+        const spread = subBlobSize.max * 1.6;
         for (let i = 0; i < subCount; i++) {
-          const rx = subBlobSize.min + Math.random() * (subBlobSize.max - subBlobSize.min);
-          const elongation = Math.random() < streakChance ? 0.2 + Math.random() * 0.25 : 0.5 + Math.random() * 0.5;
-          const ry = rx * elongation;
+          const length = subBlobSize.min + Math.random() * (subBlobSize.max - subBlobSize.min);
+          const thickness = length * (0.06 + Math.random() * 0.12); // genuinely thin, not oval
           blobs.push({
             x: centerX + (Math.random() - 0.5) * spread,
-            y: centerY + (Math.random() - 0.5) * spread * 0.55,
-            rx,
-            ry,
+            y: centerY + (Math.random() - 0.5) * spread * 0.5,
+            rx: length,
+            ry: thickness,
             rotation: Math.random() * Math.PI,
-            // Per-sub-blob variance so the cluster doesn't read as one
-            // uniform density either.
-            opacity: opacity * (0.65 + Math.random() * 0.35),
+            // A few denser "cores" per cluster, most sub-blobs faint —
+            // matches "dense opaque cores fading to soft wisps," not a
+            // uniform-density cluster.
+            opacity: i < 2 ? opacity : opacity * (0.2 + Math.random() * 0.35),
           });
         }
       }
       return blobs;
     }
 
-    function buildCloudWisps(count, sizeMin, sizeMax, opacity, streakChance) {
+    function buildCloudWisps(count, sizeMin, sizeMax, opacity) {
       const blobs = [];
       for (let i = 0; i < count; i++) {
-        const rx = sizeMin + Math.random() * (sizeMax - sizeMin);
-        const elongation = Math.random() < streakChance ? 0.2 + Math.random() * 0.25 : 0.5 + Math.random() * 0.5;
-        const ry = rx * elongation;
+        const length = sizeMin + Math.random() * (sizeMax - sizeMin);
+        const thickness = length * (0.08 + Math.random() * 0.15);
         const biasedY = ((Math.random() + Math.random()) / 2) * TEXTURE_HEIGHT;
         blobs.push({
           x: Math.random() * TEXTURE_WIDTH,
           y: biasedY,
-          rx,
-          ry,
+          rx: length,
+          ry: thickness,
           rotation: Math.random() * Math.PI,
-          opacity,
+          opacity: opacity * (0.5 + Math.random() * 0.5),
         });
       }
       return blobs;
@@ -305,18 +304,23 @@
 
     // Built once — fixed cloud shapes, so regenerating the texture doesn't
     // make clouds visibly jump around.
-    const cloudMasses = buildCloudMasses(14, { min: 35, max: 85 }, 0.6, 0.3); // large continuous formations
-    const cloudWisps = buildCloudWisps(80, 15, 45, 0.4, 0.15); // small isolated scattered wisps
+    const cloudMasses = buildCloudMasses(14, { min: 40, max: 110 }, 0.7); // large continuous formations
+    const cloudWisps = buildCloudWisps(100, 20, 60, 0.45); // small isolated scattered wisps
 
     function drawCloudLayer(ctx, blobs) {
       blobs.forEach(({ x, y, rx, ry, rotation, opacity }) => {
         ctx.save();
         ctx.translate(x, y);
         ctx.rotate(rotation);
-        const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, Math.max(rx, ry));
-        // Slight cool blue-grey rather than flat white.
+        // Gradient origin offset toward one end of the streak rather than
+        // centered — dense/opaque at that end, tapering through to fully
+        // transparent at the other, like a wisp trailing off in the wind
+        // rather than a symmetric soft-edged puff.
+        const offsetX = rx * 0.4;
+        const gradient = ctx.createRadialGradient(offsetX, 0, 0, offsetX, 0, rx * 1.3);
         gradient.addColorStop(0, `rgba(232, 242, 248, ${opacity})`);
-        gradient.addColorStop(0.5, `rgba(232, 242, 248, ${opacity * 0.55})`);
+        gradient.addColorStop(0.3, `rgba(232, 242, 248, ${opacity * 0.5})`);
+        gradient.addColorStop(0.65, `rgba(232, 242, 248, ${opacity * 0.15})`);
         gradient.addColorStop(1, 'rgba(232, 242, 248, 0)');
         ctx.fillStyle = gradient;
         ctx.beginPath();
