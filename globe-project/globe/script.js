@@ -99,7 +99,8 @@
     // Health-driven palette: atmosphere + mycelium arc glow. Beige page
     // background/aqua ocean per current design direction.
     const ATMOSPHERE_DORMANT = [216, 207, 197]; // barely-there warm glow
-    const ATMOSPHERE_THRIVING = [130, 220, 225]; // aqua glow
+    const ATMOSPHERE_THRIVING = [190, 235, 238]; // pale aqua glow — kept soft
+    // so it doesn't wash out the beige page background around the globe
 
     function lerpColor(a, b, t) {
       const c = a.map((v, i) => Math.round(v + (b[i] - v) * t));
@@ -124,7 +125,7 @@
     const EARTH_IMAGE_URL = '//unpkg.com/three-globe/example/img/earth-blue-marble.jpg';
     const BUMP_IMAGE_URL = '//unpkg.com/three-globe/example/img/earth-topology.png';
     const OCEAN_TARGET = [110, 220, 225]; // aqua/turquoise
-    const OCEAN_BLEND = 0.6;
+    const OCEAN_BLEND = 0.85;
 
     function loadImage(url) {
       return new Promise((resolve, reject) => {
@@ -143,13 +144,19 @@
         const r = data[i];
         const g = data[i + 1];
         const b = data[i + 2];
-        // Ocean in Blue Marble-style imagery is a clear blue-dominant
-        // pixel; this threshold avoids catching white/grey ice or clouds.
-        const isOcean = b - r > 15 && b - g > 10;
-        if (isOcean) {
-          data[i] = Math.round(r + (OCEAN_TARGET[0] - r) * OCEAN_BLEND);
-          data[i + 1] = Math.round(g + (OCEAN_TARGET[1] - g) * OCEAN_BLEND);
-          data[i + 2] = Math.round(b + (OCEAN_TARGET[2] - b) * OCEAN_BLEND);
+        // Continuous "blueness" score rather than a hard on/off threshold —
+        // the previous version only caught the most saturated deep-ocean
+        // pixels and left lighter coastal/hazy water untouched (patchy).
+        // Scaling blend by blueness means even faintly blue-dominant
+        // pixels shift some amount toward aqua, while land (blue is not
+        // the dominant channel) stays at zero.
+        const blueDominance = b - Math.max(r, g);
+        const blueness = Math.max(0, Math.min(1, blueDominance / 25));
+        if (blueness > 0) {
+          const blend = blueness * OCEAN_BLEND;
+          data[i] = Math.round(r + (OCEAN_TARGET[0] - r) * blend);
+          data[i + 1] = Math.round(g + (OCEAN_TARGET[1] - g) * blend);
+          data[i + 2] = Math.round(b + (OCEAN_TARGET[2] - b) * blend);
         }
       }
       ctx.putImageData(imageData, 0, 0);
@@ -302,7 +309,7 @@
     globe.controls().autoRotate = true;
     globe.controls().autoRotateSpeed = 1.2;
 
-    const BASE_ATMOSPHERE_ALTITUDE = 0.2;
+    const BASE_ATMOSPHERE_ALTITUDE = 0.12;
     const PULSE_AMPLITUDE = 0.02;
     const PULSE_PERIOD_MS = 6000;
     const ARC_COLOR_DIM = [140, 150, 158];
