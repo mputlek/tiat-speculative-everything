@@ -150,10 +150,10 @@
     // --- realistic Earth texture ----------------------------------------
     // Real photographic Earth (three-globe's bundled Blue Marble asset) +
     // terrain bump map, desaturated toward Dormant / full color toward
-    // Thriving, ocean left at its natural photographic color (no tint —
-    // reverted per request to match the reference photo's actual colors),
-    // soft cloud wisps composited into the same canvas. Regenerated only
-    // on a 5% health step, not every animation frame.
+    // Thriving, ocean tinted toward aqua/turquoise (Blue Marble's default
+    // ocean reads as a duller navy), soft cloud wisps composited into the
+    // same canvas. Regenerated only on a 5% health step, not every
+    // animation frame.
     // Matches the bump map's native resolution (2048x1024) — the earlier
     // 1024x512 (halved for perceived perf headroom around the per-pixel
     // ocean-tint loop) threw away real detail from the 4096x2048 source
@@ -169,6 +169,8 @@
     // across every redirect hop, browser, and cache state.
     const EARTH_IMAGE_URL = 'assets/earth-blue-marble.jpg';
     const BUMP_IMAGE_URL = 'assets/earth-topology.png';
+    const OCEAN_TARGET = [110, 220, 225]; // aqua/turquoise
+    const OCEAN_BLEND = 0.85;
 
     function loadImage(url) {
       return new Promise((resolve, reject) => {
@@ -177,6 +179,28 @@
         img.onerror = reject;
         img.src = url;
       });
+    }
+
+    function tintOceanTowardAqua(ctx, width, height) {
+      const imageData = ctx.getImageData(0, 0, width, height);
+      const data = imageData.data;
+      for (let i = 0; i < data.length; i += 4) {
+        const r = data[i];
+        const g = data[i + 1];
+        const b = data[i + 2];
+        // Continuous "blueness" score rather than a hard on/off threshold,
+        // so lighter coastal/hazy water shifts too, not just the most
+        // saturated deep-ocean pixels — full even coverage, not patchy.
+        const blueDominance = b - Math.max(r, g);
+        const blueness = Math.max(0, Math.min(1, blueDominance / 25));
+        if (blueness > 0) {
+          const blend = blueness * OCEAN_BLEND;
+          data[i] = Math.round(r + (OCEAN_TARGET[0] - r) * blend);
+          data[i + 1] = Math.round(g + (OCEAN_TARGET[1] - g) * blend);
+          data[i + 2] = Math.round(b + (OCEAN_TARGET[2] - b) * blend);
+        }
+      }
+      ctx.putImageData(imageData, 0, 0);
     }
 
     // Clouds: composited directly into the same texture as soft white
@@ -218,6 +242,8 @@
       ctx.filter = `saturate(${saturation}%) brightness(${brightness}%)`;
       ctx.drawImage(earthImage, 0, 0, canvas.width, canvas.height);
       ctx.filter = 'none';
+
+      tintOceanTowardAqua(ctx, canvas.width, canvas.height);
 
       const cloudOpacity = 0.5;
       cloudBlobs.forEach(({ x, y, r }) => {
