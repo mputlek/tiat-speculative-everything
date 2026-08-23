@@ -85,6 +85,105 @@
     return canvas.toDataURL('image/png');
   }
 
+  // --- mycelium thread network ---------------------------------------
+  // A fixed set of scattered growth points connected into a small
+  // nearest-neighbor graph, revealed progressively — growing outward via
+  // BFS order from a single seed point, like a real colony spreading —
+  // as healthValue rises. Stands in for real visitor-message origins
+  // until that data exists (open decision, not yet resolved). Rendered
+  // as Globe.gl arcs below.
+  const MYCELIUM_NODE_COUNT = 50;
+  const MYCELIUM_NEIGHBORS_PER_NODE = 3;
+
+  function randomPointOnSphere() {
+    // Uniform distribution over the sphere surface (avoids pole clustering
+    // that plain random lat would cause).
+    const lat = (Math.asin(Math.random() * 2 - 1) * 180) / Math.PI;
+    const lng = Math.random() * 360 - 180;
+    return { lat, lng };
+  }
+
+  function angularDistance(a, b) {
+    const toRad = (d) => (d * Math.PI) / 180;
+    const dLat = toRad(b.lat - a.lat);
+    const dLng = toRad(b.lng - a.lng);
+    const s =
+      Math.sin(dLat / 2) ** 2 +
+      Math.cos(toRad(a.lat)) * Math.cos(toRad(b.lat)) * Math.sin(dLng / 2) ** 2;
+    return 2 * Math.atan2(Math.sqrt(s), Math.sqrt(1 - s));
+  }
+
+  function buildMyceliumNetwork() {
+    const nodes = Array.from({ length: MYCELIUM_NODE_COUNT }, randomPointOnSphere);
+
+    // Connect each node to its nearest few neighbors, deduped.
+    const edgeSet = new Set();
+    const edges = [];
+    nodes.forEach((node, i) => {
+      const nearest = nodes
+        .map((other, j) => ({ j, d: i === j ? Infinity : angularDistance(node, other) }))
+        .sort((a, b) => a.d - b.d)
+        .slice(0, MYCELIUM_NEIGHBORS_PER_NODE);
+
+      nearest.forEach(({ j }) => {
+        const key = i < j ? `${i}-${j}` : `${j}-${i}`;
+        if (!edgeSet.has(key)) {
+          edgeSet.add(key);
+          edges.push({ a: i, b: j });
+        }
+      });
+    });
+
+    // BFS outward from one random seed node, so the network reveals as a
+    // single spreading colony rather than edges popping in at
+    // disconnected random spots.
+    const adjacency = nodes.map(() => []);
+    edges.forEach((edge, idx) => {
+      adjacency[edge.a].push({ to: edge.b, edgeIdx: idx });
+      adjacency[edge.b].push({ to: edge.a, edgeIdx: idx });
+    });
+
+    const seed = Math.floor(Math.random() * nodes.length);
+    const visited = new Set([seed]);
+    const queue = [seed];
+    const edgeGeneration = new Array(edges.length).fill(Infinity);
+    let generation = 0;
+    while (queue.length) {
+      const levelSize = queue.length;
+      generation += 1;
+      for (let i = 0; i < levelSize; i++) {
+        const current = queue.shift();
+        adjacency[current].forEach(({ to, edgeIdx }) => {
+          if (edgeGeneration[edgeIdx] === Infinity) {
+            edgeGeneration[edgeIdx] = generation;
+          }
+          if (!visited.has(to)) {
+            visited.add(to);
+            queue.push(to);
+          }
+        });
+      }
+    }
+
+    return edges
+      .map((edge, idx) => ({ edge, generation: edgeGeneration[idx] }))
+      .sort((a, b) => a.generation - b.generation)
+      .map(({ edge }) => ({
+        startLat: nodes[edge.a].lat,
+        startLng: nodes[edge.a].lng,
+        endLat: nodes[edge.b].lat,
+        endLng: nodes[edge.b].lng,
+      }));
+  }
+
+  const myceliumEdges = buildMyceliumNetwork();
+
+  function lerpColorAlpha(a, b, t, alphaMin, alphaMax) {
+    const c = a.map((v, i) => Math.round(v + (b[i] - v) * t));
+    const alpha = alphaMin + (alphaMax - alphaMin) * t;
+    return `rgba(${c[0]}, ${c[1]}, ${c[2]}, ${alpha.toFixed(2)})`;
+  }
+
   function render() {
     const t = state.healthValue / HEALTH_MAX;
     const color = lerpColor(DORMANT_COLOR, THRIVING_COLOR, t);
@@ -106,11 +205,15 @@
     render();
   }
 
-  // --- globe (placeholder procedural texture; mycelium threads come next) -
+  // --- globe (placeholder procedural texture; mycelium threads below) -----
   const globe = Globe()(document.getElementById('globeViz'))
     .globeImageUrl(generateGlobeTexture())
     .backgroundColor('#f3e6eb')
-    .showAtmosphere(true);
+    .showAtmosphere(true)
+    .arcAltitude(0.05)
+    .arcDashLength(0.4)
+    .arcDashGap(0.3)
+    .arcDashAnimateTime(5000);
 
   // Slow ambient auto-rotate so the display reads as alive even when no
   // visitor is touching it — living-system pacing, not a static image.
@@ -126,7 +229,10 @@
   const BASE_ATMOSPHERE_ALTITUDE = 0.2;
   const PULSE_AMPLITUDE = 0.02;
   const PULSE_PERIOD_MS = 6000;
+  const ARC_COLOR_DIM = [168, 161, 144]; // matches dormant surface tone
+  const ARC_COLOR_GLOW = [130, 255, 210]; // vivid bright mint glow
   let currentT = state.healthValue / HEALTH_MAX;
+  let lastRevealCount = -1;
 
   function animateGlobe() {
     const targetT = state.healthValue / HEALTH_MAX;
@@ -139,6 +245,18 @@
     globe.globeMaterial().color.set(color);
     globe.atmosphereColor(atmosphereColor);
     globe.atmosphereAltitude(BASE_ATMOSPHERE_ALTITUDE + pulse);
+
+    // Reveal threads gradually as currentT eases upward — sparse/no
+    // network at Dormant, fully spread at Thriving. Only touch arcsData
+    // when the revealed count actually changes, so we're not rebuilding
+    // Globe.gl's arc meshes every animation frame.
+    const revealCount = Math.floor(currentT * myceliumEdges.length);
+    if (revealCount !== lastRevealCount) {
+      lastRevealCount = revealCount;
+      globe.arcsData(myceliumEdges.slice(0, revealCount));
+    }
+    globe.arcColor(() => lerpColorAlpha(ARC_COLOR_DIM, ARC_COLOR_GLOW, currentT, 0.35, 0.95));
+    globe.arcStroke(0.15 + currentT * 0.35);
 
     requestAnimationFrame(animateGlobe);
   }
