@@ -79,6 +79,13 @@
     .showAtmosphere(true)
     .atmosphereAltitude(0.2);
 
+  // Slow ambient auto-rotate so the display reads as alive even when no
+  // visitor is touching it — living-system pacing, not a static image.
+  // Visitors can still drag to spin manually; OrbitControls pauses
+  // auto-rotate during that interaction and resumes after.
+  globe.controls().autoRotate = true;
+  globe.controls().autoRotateSpeed = 0.4;
+
   globe.globeMaterial().color.set(lerpColor(DORMANT_COLOR, THRIVING_COLOR, state.healthValue / HEALTH_MAX));
 
   render();
