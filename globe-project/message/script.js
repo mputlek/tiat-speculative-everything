@@ -50,14 +50,14 @@
     channel.publish('message', { text, ts: now, clientId })
       .then(() => {
         sendBtn.disabled = false;
-        feedback.style.color = '#4caf50';
+        feedback.style.color = '#3faf87';
         feedback.textContent = 'Your message reached the mycelium.';
         input.value = '';
       })
       .catch((err) => {
         sendBtn.disabled = false;
         feedback.textContent = 'Message did not reach the mycelium. Try again.';
-        feedback.style.color = '#c0392b';
+        feedback.style.color = '#d97757';
         console.error('Ably publish error', err);
       });
   });

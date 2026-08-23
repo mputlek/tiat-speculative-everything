@@ -1,6 +1,6 @@
-/* Background + typography pass landed; the full Animal Crossing palette
-   (buttons, accents) and mycelium motifs are still placeholder and come
-   next. */
+/* Background, typography, and the Animal Crossing palette pass have landed
+   (button/accent colors, rounded form controls). Mycelium motifs are still
+   placeholder and come next. */
 
 * {
   box-sizing: border-box;
@@ -32,11 +32,11 @@ body {
 }
 
 .status.connected {
-  color: #4caf50;
+  color: #3faf87;
 }
 
 .status.error {
-  color: #c0392b;
+  color: #d97757;
 }
 
 h1 {
@@ -57,24 +57,25 @@ textarea {
   padding: 12px;
   font-size: 1rem;
   font-family: inherit;
-  border: 1px solid #ccc;
-  border-radius: 8px;
+  border: 1px solid #d9c9c2;
+  border-radius: 14px;
   resize: vertical;
 }
 
 button {
   padding: 14px;
   font-size: 1rem;
-  font-weight: 600;
+  font-weight: 700;
+  font-family: inherit;
   border: none;
-  border-radius: 8px;
-  background: #4caf50;
+  border-radius: 14px;
+  background: #3faf87;
   color: white;
   cursor: pointer;
 }
 
 button:disabled {
-  background: #a5d6a7;
+  background: #bfe0d2;
   cursor: not-allowed;
 }
 
@@ -82,5 +83,5 @@ button:disabled {
   margin-top: 16px;
   min-height: 1.2em;
   font-size: 0.95rem;
-  color: #4caf50;
+  color: #3faf87;
 }

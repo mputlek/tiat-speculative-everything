@@ -1,6 +1,7 @@
-/* Background + typography pass landed; the mycelium thread visuals and full
-   Animal Crossing palette (globe color lerp, health bar, atmosphere) are
-   still placeholder and come next. */
+/* Background, typography, and the Animal Crossing palette pass have landed
+   (globe color lerp, atmosphere glow, health bar, UI accents). The mycelium
+   thread visuals and custom globe texture are still placeholder and come
+   next. */
 
 * {
   box-sizing: border-box;
@@ -38,11 +39,11 @@ html, body {
 }
 
 .status.connected {
-  color: #4caf50;
+  color: #3faf87;
 }
 
 .status.error {
-  color: #c0392b;
+  color: #d97757;
 }
 
 .stage {
@@ -62,7 +63,7 @@ html, body {
 .healthBarFill {
   height: 100%;
   width: 0%;
-  background: #4caf50;
+  background: #a8a190;
   transition: width 1.2s ease-out, background-color 1.2s ease-out;
 }
 

@@ -27,11 +27,17 @@
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   }
 
-  // --- placeholder visuals: color lerp + bar + stage label ---------------
-  // Dormant: muted grey-green. Thriving: saturated green. This is a stand-in
-  // for the mycelium thread/bioluminescence treatment planned later.
-  const DORMANT_COLOR = [138, 143, 135]; // #8a8f87
-  const THRIVING_COLOR = [76, 175, 80]; // #4caf50
+  // --- Animal Crossing-inspired palette: color lerp + bar + stage label --
+  // Dormant: muted dusty pastel (dim, not dead). Thriving: saturated mint.
+  // The atmosphere lerps separately toward a soft lavender-pink glow rather
+  // than mirroring the surface color, per the warm/pastel direction (no
+  // cold sci-fi blue). This is still a stand-in for the mycelium
+  // thread/bioluminescence treatment planned later.
+  const DORMANT_COLOR = [168, 161, 144]; // #a8a190 dusty sage-taupe
+  const THRIVING_COLOR = [79, 209, 165]; // #4fd1a5 saturated mint
+
+  const ATMOSPHERE_DORMANT = [216, 207, 197]; // #d8cfc5 barely-there warm glow
+  const ATMOSPHERE_THRIVING = [232, 184, 222]; // #e8b8de soft lavender-pink
 
   function lerpColor(a, b, t) {
     const c = a.map((v, i) => Math.round(v + (b[i] - v) * t));
@@ -47,6 +53,7 @@
   function render() {
     const t = state.healthValue / HEALTH_MAX;
     const color = lerpColor(DORMANT_COLOR, THRIVING_COLOR, t);
+    const atmosphereColor = lerpColor(ATMOSPHERE_DORMANT, ATMOSPHERE_THRIVING, t);
 
     fillEl.style.width = `${state.healthValue}%`;
     fillEl.style.backgroundColor = color;
@@ -55,7 +62,7 @@
 
     if (globe) {
       globe.globeMaterial().color.set(color);
-      globe.atmosphereColor(color);
+      globe.atmosphereColor(atmosphereColor);
     }
   }
 
