@@ -92,7 +92,12 @@
   try {
     await setUpGlobe();
   } catch (err) {
-    console.error('Globe visuals failed to initialize, falling back:', err);
+    // Surfaced visibly (not just console) — a silent fallback to
+    // Globe.gl's bare default appearance previously looked like a
+    // half-working feature rather than a clear failure, which cost a lot
+    // of back-and-forth to diagnose.
+    console.error('Globe visuals failed to initialize:', err);
+    countEl.textContent = `Globe visuals failed to load (${err.message || err}) — messaging still works`;
   }
 
   async function setUpGlobe() {
@@ -122,15 +127,19 @@
     // step, not every animation frame.
     const TEXTURE_WIDTH = 1024;
     const TEXTURE_HEIGHT = 512;
-    const EARTH_IMAGE_URL = '//unpkg.com/three-globe/example/img/earth-blue-marble.jpg';
-    const BUMP_IMAGE_URL = '//unpkg.com/three-globe/example/img/earth-topology.png';
+    // Self-hosted rather than loaded cross-origin from a CDN: canvas
+    // getImageData()/toDataURL() below require the source image to be
+    // taint-free, and same-origin assets are taint-free by web platform
+    // guarantee — no dependency on a third party's CORS headers holding up
+    // across every redirect hop, browser, and cache state.
+    const EARTH_IMAGE_URL = 'assets/earth-blue-marble.jpg';
+    const BUMP_IMAGE_URL = 'assets/earth-topology.png';
     const OCEAN_TARGET = [110, 220, 225]; // aqua/turquoise
     const OCEAN_BLEND = 0.85;
 
     function loadImage(url) {
       return new Promise((resolve, reject) => {
         const img = new Image();
-        img.crossOrigin = 'anonymous';
         img.onload = () => resolve(img);
         img.onerror = reject;
         img.src = url;
