@@ -171,7 +171,10 @@
     const BUMP_IMAGE_URL = 'assets/earth-topology.png';
     const SPECULAR_MAP_URL = 'assets/earth-water.png'; // white=ocean, black=land
     const OCEAN_TARGET = [110, 220, 225]; // aqua/turquoise
-    const OCEAN_BLEND = 0.85;
+    // Raised close to 1 so deep/shallow ocean pixels converge toward
+    // nearly the same light target color — subtle variation between the
+    // two rather than a stark light/dark contrast.
+    const OCEAN_BLEND = 0.95;
     const GREEN_TARGET = [70, 195, 85]; // vivid, brighter vegetation green
     const GREEN_BLEND = 0.5; // milder than ocean — keep some natural photo variation
 
