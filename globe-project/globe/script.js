@@ -174,7 +174,7 @@
     // Raised close to 1 so deep/shallow ocean pixels converge toward
     // nearly the same light target color — subtle variation between the
     // two rather than a stark light/dark contrast.
-    const OCEAN_BLEND = 0.95;
+    const OCEAN_BLEND = 0.98;
     const GREEN_TARGET = [70, 195, 85]; // vivid, brighter vegetation green
     const GREEN_BLEND = 0.5; // milder than ocean — keep some natural photo variation
 
