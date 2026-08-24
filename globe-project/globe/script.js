@@ -169,6 +169,7 @@
     // across every redirect hop, browser, and cache state.
     const EARTH_IMAGE_URL = 'assets/earth-blue-marble.jpg';
     const BUMP_IMAGE_URL = 'assets/earth-topology.png';
+    const SPECULAR_MAP_URL = 'assets/earth-water.png'; // white=ocean, black=land
     const OCEAN_TARGET = [110, 220, 225]; // aqua/turquoise
     const OCEAN_BLEND = 0.85;
     const GREEN_TARGET = [70, 195, 85]; // vivid, brighter vegetation green
@@ -254,8 +255,7 @@
     // from a third party for the same reliability reasons.
     const CLOUDS_IMAGE_URL = 'assets/clouds.png';
 
-    async function buildCloudsLayer(scene) {
-      const THREE = await import('https://unpkg.com/three/build/three.module.js');
+    async function buildCloudsLayer(scene, THREE) {
       const texture = await new THREE.TextureLoader().loadAsync(CLOUDS_IMAGE_URL);
       const geometry = new THREE.SphereGeometry(GLOBE_RADIUS * 1.004, 75, 75);
       const material = new THREE.MeshPhongMaterial({
@@ -370,23 +370,47 @@
     // cause of the missing background/atmosphere/arcs). It's a real
     // property on the underlying three.js material, set directly instead.
     globe.globeMaterial().bumpScale = 10;
-    // Glossy/wet look on the whole surface (a true ocean-only specular
-    // would need a specular map masking land out — reasonable
-    // simplification for now). Near-white specular + higher shininess for
-    // a more visible "sun glint" highlight rather than a subtle sheen.
-    globe.globeMaterial().specular.set('#dff6fa');
-    globe.globeMaterial().shininess = 25;
 
-    // Best-effort — see the clouds section above for why this is isolated
-    // in its own try/catch rather than allowed to throw into the outer
-    // setUpGlobe try/catch: a clouds-layer failure shouldn't take down the
-    // terrain/atmosphere/arcs that already rendered successfully above.
+    // THREE is needed for both the specular map (a texture assigned
+    // directly to the material) and the clouds layer (a whole custom
+    // mesh) below — loaded once here and shared, rather than importing
+    // twice. Everything past this point is best-effort: each piece is
+    // isolated in its own try/catch so a failure in one (missing THREE,
+    // a bad texture load) can't take down the terrain/atmosphere/arcs
+    // that already rendered successfully above.
+    let THREE = null;
+    try {
+      THREE = await import('https://unpkg.com/three/build/three.module.js');
+    } catch (err) {
+      console.error('Failed to load THREE (specular map + clouds unavailable):', err);
+    }
+
+    if (THREE) {
+      try {
+        // Official Globe.gl technique: earth-water.png is a black/white
+        // land-water mask used as specularMap — white (ocean) picks up
+        // the shininess/highlight, black (land) stays matte. Gives the
+        // glossy-water/matte-land contrast automatically instead of a
+        // uniform sheen across the whole sphere.
+        const specularTexture = await new THREE.TextureLoader().loadAsync(SPECULAR_MAP_URL);
+        globe.globeMaterial().specularMap = specularTexture;
+        globe.globeMaterial().specular.set('#888888');
+        globe.globeMaterial().shininess = 15;
+      } catch (err) {
+        console.error('Specular map failed, falling back to whole-surface sheen:', err);
+        globe.globeMaterial().specular.set('#6a86b0');
+        globe.globeMaterial().shininess = 15;
+      }
+    }
+
     const GLOBE_RADIUS = 100; // three-globe's internal globe radius convention
     let cloudsMesh = null;
-    try {
-      cloudsMesh = await buildCloudsLayer(globe.scene());
-    } catch (err) {
-      console.error('Clouds layer failed, continuing without it:', err);
+    if (THREE) {
+      try {
+        cloudsMesh = await buildCloudsLayer(globe.scene(), THREE);
+      } catch (err) {
+        console.error('Clouds layer failed, continuing without it:', err);
+      }
     }
 
     globe.controls().autoRotate = true;
