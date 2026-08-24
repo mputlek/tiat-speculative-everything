@@ -195,11 +195,16 @@
         const g = data[i + 1];
         const b = data[i + 2];
 
-        // Continuous "dominance" scores rather than hard on/off thresholds,
-        // so lighter/hazier pixels shift too, not just the most saturated
-        // ones — full even coverage, not patchy.
-        const blueDominance = b - Math.max(r, g);
-        const blueness = Math.max(0, Math.min(1, blueDominance / 25));
+        // Ratio-based, not a raw channel difference — a raw difference
+        // shrinks in dark/deep water even though it's still clearly
+        // blue-toned (every channel scales down together), which meant
+        // the darkest water was getting LESS tint, not more, leaving
+        // exactly the dark patches this was supposed to lighten. A ratio
+        // is brightness-independent: dark water with the same blue-vs-
+        // other-channels proportions still saturates to full blend.
+        const maxRG = Math.max(r, g);
+        const blueRatio = b / (maxRG + 1);
+        const blueness = Math.max(0, Math.min(1, (blueRatio - 1) / 0.25));
         if (blueness > 0) {
           const blend = blueness * OCEAN_BLEND;
           data[i] = Math.round(r + (OCEAN_TARGET[0] - r) * blend);
