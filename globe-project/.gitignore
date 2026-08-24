@@ -1,9 +1,0 @@
-node_modules/
-.env
-.env.local
-
-# Generated at build time from env vars — contains the real Ably API key.
-# Never commit this. See shared/config.template.js for the checked-in placeholder.
-shared/config.js
-
-.DS_Store

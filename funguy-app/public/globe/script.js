@@ -1,12 +1,21 @@
 (async function () {
-  const config = window.FUNGUY_CONFIG;
   const statusEl = document.getElementById('status');
   const stageEl = document.getElementById('stage');
   const fillEl = document.getElementById('healthBarFill');
   const countEl = document.getElementById('healthCount');
 
-  if (!config || !config.ABLY_API_KEY || config.ABLY_API_KEY === 'YOUR_ABLY_API_KEY_HERE') {
-    statusEl.textContent = 'not configured — see shared/config.template.js';
+  // Fetched at load time from a Next.js API route rather than a build-time-
+  // generated shared/config.js — this page now lives in the Next.js app's
+  // public/ folder, which isn't templated at build time.
+  let config;
+  try {
+    config = await fetch('/api/globe-config').then((r) => r.json());
+  } catch (e) {
+    config = null;
+  }
+
+  if (!config || !config.ABLY_API_KEY) {
+    statusEl.textContent = 'not configured — set ABLY_API_KEY';
     statusEl.className = 'status error';
     return;
   }

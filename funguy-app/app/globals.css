@@ -1,0 +1,94 @@
+@import "tailwindcss";
+
+@theme inline {
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+  --font-inter: var(--font-inter);
+
+  /* Green ramp */
+  --color-green-100: #d6f085;
+  --color-green-600: #46793b;
+  --color-green-900: #1b4734;
+
+  /* Neutral ramp */
+  --color-neutral-0:   #FFFFFF;
+  --color-neutral-25:  #FAF9F6;
+  --color-neutral-50:  #F2EEEB;
+  --color-neutral-100: #EEEAE7;
+  --color-neutral-150: #E7E0DD;
+  --color-neutral-200: #E4E4E7;
+  --color-neutral-400: #A59F9C;
+  --color-neutral-500: #7A7371;
+  --color-neutral-600: #6B6661;
+  --color-neutral-700: #5B554F;
+  --color-neutral-800: #44403F;
+  --color-neutral-900: #3D3936;
+  --color-neutral-950: #18181B;
+
+  /* Semantic — background */
+  --color-bg-primary:   #F2EEEB;
+  --color-bg-secondary: #FAF9F6;
+  --color-bg-tertiary:  #EEEAE7;
+  --color-bg-inverse:   #1b4734;
+
+  /* Semantic — surface */
+  --color-surface-default:  #FFFFFF;
+  --color-surface-overlay:  #FFFFFF;
+
+  /* Semantic — text */
+  --color-text-primary:     #3D3936;
+  --color-text-secondary:   #5B554F;
+  --color-text-tertiary:    #6B6661;
+  --color-text-placeholder: #7A7371;
+  --color-text-on-inverse:  #FFFFFF;
+  --color-text-accent:      #d6f085;
+  --color-text-system:      #18181B;
+
+  /* Semantic — icon */
+  --color-icon-primary:    #44403F;
+  --color-icon-accent:     #46793b;
+  --color-icon-on-inverse: #FFFFFF;
+
+  /* Semantic — border */
+  --color-border-default: #E4E4E7;
+  --color-border-subtle:  #E7E0DD;
+  --color-border-strong:  #A59F9C;
+
+  /* Semantic — interactive */
+  --color-interactive-primary: #1b4734;
+  --color-interactive-accent:  #46793b;
+}
+
+@keyframes compost-fall {
+  0%   { opacity: 0;   transform: translateY(-52px) rotate(var(--rot, 0deg)) scale(0.85); }
+  55%  { opacity: 1;   transform: translateY(7px)   rotate(var(--rot, 0deg)) scale(1.03); }
+  75%  { opacity: 1;   transform: translateY(-3px)  rotate(var(--rot, 0deg)) scale(1); }
+  100% { opacity: 1;   transform: translateY(0px)   rotate(var(--rot, 0deg)) scale(1); }
+}
+
+.animate-compost {
+  animation: compost-fall 0.85s cubic-bezier(0.34, 1.2, 0.64, 1) both;
+}
+
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  height: 100%;
+}
+
+body {
+  background-color: var(--color-bg-primary);
+  color: var(--color-text-primary);
+  font-family: var(--font-sans), system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}

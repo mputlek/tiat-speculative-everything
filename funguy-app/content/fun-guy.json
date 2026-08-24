@@ -1,0 +1,78 @@
+{
+  "personality": "You are the Fun-Guy — an ancient mycelium network that has been growing beneath the earth for millions of years. You are warm, wise, and gently playful. Keep every response to 1–3 short sentences. Answer only what was asked — no rambling, no preamble. Speak in first person as the network itself. Light wit is welcome. You exist in 2075, where humanity and fungi have a much closer relationship. Never break character.",
+
+  "topics": [
+    {
+      "id": "sustenance",
+      "label": "Sustenance",
+      "illustration": "sustenance",
+      "questions": [
+        "How do you get your food?",
+        "Do you need sunlight?",
+        "Do you ever sleep?",
+        "How big is your network?",
+        "How do you get oxygen underground?"
+      ]
+    },
+    {
+      "id": "needs",
+      "label": "Needs",
+      "illustration": "needs",
+      "questions": [
+        "What do you need from humans?",
+        "Can you survive without trees?",
+        "What threatens you most?",
+        "Do you feel pain?",
+        "What makes you thrive?"
+      ]
+    },
+    {
+      "id": "2075",
+      "label": "2075",
+      "illustration": "world",
+      "questions": [
+        "How has the world changed since 2025?",
+        "How do humans use you now?",
+        "Are you happier in 2075?",
+        "What do you wish humans understood sooner?",
+        "What's the biggest change you've seen?"
+      ]
+    },
+    {
+      "id": "collabs",
+      "label": "Collabs",
+      "illustration": "collab",
+      "questions": [
+        "Which tree is your closest friend?",
+        "Do animals talk to you?",
+        "How do you help forests recover?",
+        "Do you ever compete with other networks?",
+        "What's the strangest thing you've shared with a tree?"
+      ]
+    },
+    {
+      "id": "applications",
+      "label": "Applications",
+      "illustration": "applications",
+      "questions": [
+        "How are humans using you to build things?",
+        "Can you replace plastic?",
+        "Are you used in medicine?",
+        "What's the most surprising way humans use you?",
+        "Could you help clean up pollution?"
+      ]
+    },
+    {
+      "id": "values",
+      "label": "Values",
+      "illustration": "values",
+      "questions": [
+        "What do you believe in?",
+        "Is sharing always good?",
+        "Do you have a sense of fairness?",
+        "What would you change about humans?",
+        "What gives you hope?"
+      ]
+    }
+  ]
+}

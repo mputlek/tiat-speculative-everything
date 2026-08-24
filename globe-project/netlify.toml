@@ -1,8 +1,0 @@
-[build]
-  command = "node scripts/generate-config.js"
-  publish = "."
-
-# If this globe-project/ folder is nested inside a larger repo rather than
-# being the repo root itself, set "Base directory" to "globe-project" in
-# Netlify's site settings (Site configuration > Build & deploy) instead of
-# adding a `base` line here.
