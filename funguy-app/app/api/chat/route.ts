@@ -1,9 +1,20 @@
-import Anthropic from "@anthropic-ai/sdk";
+import OpenAI from "openai";
 import Ably from "ably";
 import { readFileSync } from "fs";
 import { join } from "path";
 
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+// Constructed lazily inside the handler, not at module scope — the OpenAI
+// client throws immediately if credentials are missing, and Next.js
+// executes this module at build time too (page-data collection), which
+// would break the build in any environment where the Gateway's env vars
+// are only injected at runtime, not build time (e.g. local dev without
+// .env.local set). No apiKey/baseURL passed — Netlify's AI Gateway
+// auto-injects OPENAI_BASE_URL (and auth) once the site has a production
+// deploy, so the official SDK picks it up with zero config. Requires the
+// Netlify site to be on a credit-based plan.
+function getClient() {
+  return new OpenAI();
+}
 
 const ABLY_CHANNEL_NAME = "funguy-healing"; // fixed integration point with /globe — not worth an env var here
 
@@ -44,18 +55,27 @@ export async function POST(request: Request) {
     .find((m: { role: string; content: string }) => m.role === "user");
 
   const [response] = await Promise.all([
-    client.messages.create({
-      model: "claude-haiku-4-5-20251001",
-      max_tokens: 256,
-      system: personality,
-      messages: messages.map((m: { role: string; content: string }) => ({
-        role: m.role,
-        content: m.content,
-      })),
+    getClient().responses.create({
+      model: "gpt-5.6-luna",
+      // Max reasoning effort per explicit request — note this trades away
+      // latency (and, in a serverless function, risks hitting the
+      // platform's execution timeout on a slow response). Drop to "high"
+      // if that becomes a problem in practice.
+      reasoning: { effort: "max" },
+      // Generous cap: "max" effort can spend many hidden reasoning tokens
+      // before producing the visible reply, on top of it.
+      max_output_tokens: 4096,
+      input: [
+        { role: "system", content: personality },
+        ...messages.map((m: { role: string; content: string }) => ({
+          role: m.role,
+          content: m.content,
+        })),
+      ],
     }),
     lastUserMessage ? publishToGlobe(lastUserMessage.content) : Promise.resolve(),
   ]);
 
-  const reply = response.content[0].type === "text" ? response.content[0].text : "";
+  const reply = response.output_text ?? "";
   return Response.json({ reply });
 }
