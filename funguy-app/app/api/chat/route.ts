@@ -76,6 +76,14 @@ export async function POST(request: Request) {
     lastUserMessage ? publishToGlobe(lastUserMessage.content) : Promise.resolve(),
   ]);
 
+  // Logged (not returned to the client) so the actual served model +
+  // reasoning-token spend is verifiable per-request in Netlify's function
+  // logs — confirms gpt-5.6-luna at max effort is really what's running,
+  // rather than trusting the request config alone.
+  console.log(
+    `[chat] model=${response.model} reasoning_tokens=${response.usage?.output_tokens_details?.reasoning_tokens ?? "n/a"} output_tokens=${response.usage?.output_tokens ?? "n/a"}`
+  );
+
   const reply = response.output_text ?? "";
   return Response.json({ reply });
 }
