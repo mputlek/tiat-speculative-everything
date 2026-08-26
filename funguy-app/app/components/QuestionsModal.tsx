@@ -37,14 +37,14 @@ export default function QuestionsModal({ topic, onAsk, onBack, onClose }: Questi
         </div>
 
         <div className="flex flex-col gap-1">
-          {topic.questions.map((q) => (
+          {topic.questions.map((qa) => (
             <button
-              key={q}
-              onClick={() => onAsk(q)}
+              key={qa.question}
+              onClick={() => onAsk(qa.question)}
               className="group flex items-center gap-3 px-3 py-3 rounded-xl text-left hover:bg-[var(--color-bg-primary)] transition-colors"
             >
               <span className="w-4 h-4 flex-shrink-0 rounded-full border-2 border-[var(--color-border-strong)] group-hover:border-[var(--color-green-600)] transition-colors" />
-              <span className="text-sm text-[var(--color-text-primary)]">{q}</span>
+              <span className="text-sm text-[var(--color-text-primary)]">{qa.question}</span>
             </button>
           ))}
         </div>

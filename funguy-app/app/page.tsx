@@ -77,7 +77,7 @@ export default function Home() {
       ...prev,
       [topicId]: [...(prev[topicId] ?? []), pick],
     }));
-    sendMessage(topic.questions[pick]);
+    sendMessage(topic.questions[pick].question);
   }
 
   return (

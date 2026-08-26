@@ -18,13 +18,30 @@ function getClient() {
 
 const ABLY_CHANNEL_NAME = "funguy-healing"; // fixed integration point with /globe — not worth an env var here
 
-function getPersonality(): string {
+interface FunGuyData {
+  personality: string;
+  topics: { questions: { question: string; answer: string }[] }[];
+}
+
+function getFunGuyData(): FunGuyData {
   const raw = readFileSync(join(process.cwd(), "content/fun-guy.json"), "utf-8");
-  return JSON.parse(raw).personality;
+  return JSON.parse(raw);
+}
+
+// Topic-button questions carry their own pre-written answer (content/fun-guy.json).
+// When an incoming question matches one exactly, we serve that answer verbatim
+// instead of asking the LLM to improvise — free-typed questions won't match and
+// fall through to the normal LLM path below.
+function getCannedAnswer(data: FunGuyData, question: string): string | undefined {
+  for (const topic of data.topics) {
+    const match = topic.questions.find((q) => q.question === question);
+    if (match) return match.answer;
+  }
+  return undefined;
 }
 
 // Worldbuilding Q&A lore, kept as a separate markdown file (not JSON) since it's
-// prose, not config — read fresh per-request same as getPersonality() above.
+// prose, not config — read fresh per-request same as getFunGuyData() above.
 function getKnowledgeBase(): string {
   return readFileSync(join(process.cwd(), "content/fun-guy-knowledge.md"), "utf-8");
 }
@@ -54,19 +71,31 @@ async function publishToGlobe(text: string) {
 export async function POST(request: Request) {
   const { messages } = await request.json();
 
-  const personality = getPersonality();
+  const lastUserMessage = [...messages]
+    .reverse()
+    .find((m: { role: string; content: string }) => m.role === "user");
+
+  const funGuyData = getFunGuyData();
+  const canned = lastUserMessage
+    ? getCannedAnswer(funGuyData, lastUserMessage.content.trim())
+    : undefined;
+
+  if (canned !== undefined) {
+    // Still publish to the globe like any other message, but skip the LLM
+    // call entirely — this question has a pre-written answer.
+    await (lastUserMessage ? publishToGlobe(lastUserMessage.content) : Promise.resolve());
+    console.log(`[chat] served canned answer for: "${lastUserMessage?.content}"`);
+    return Response.json({ reply: canned });
+  }
+
   const knowledge = getKnowledgeBase();
-  const systemPrompt = `${personality}
+  const systemPrompt = `${funGuyData.personality}
 
 Background knowledge — draw on these facts to ground your answers, but never quote
 them at length or copy their length/format. Always stay in your normal 1–3 sentence
 voice.
 
 ${knowledge}`;
-
-  const lastUserMessage = [...messages]
-    .reverse()
-    .find((m: { role: string; content: string }) => m.role === "user");
 
   const [response] = await Promise.all([
     getClient().responses.create({
