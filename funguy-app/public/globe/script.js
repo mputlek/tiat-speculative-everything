@@ -23,6 +23,13 @@
   const STORAGE_KEY = 'funguy-health-state';
   const HEALTH_MAX = config.HEALTH_MAX || 100;
 
+  // Testing convenience — visiting ?reset clears saved progress with no
+  // console/devtools needed. Same key /globe-attract uses, so it clears
+  // for both pages at once (they share localStorage on this origin).
+  if (new URLSearchParams(location.search).has('reset')) {
+    localStorage.removeItem(STORAGE_KEY);
+  }
+
   // --- persisted state (survives page reload on the kiosk machine) -------
   let state = { healthValue: 0, messageCount: 0 };
   try {

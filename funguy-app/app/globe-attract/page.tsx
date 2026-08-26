@@ -12,6 +12,14 @@ export default function GlobeAttractPage() {
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
+    // Testing convenience — visiting ?reset clears saved progress with no
+    // console/devtools needed. Same key /globe/script.js uses, so it
+    // clears for both pages at once (they share localStorage on this
+    // origin).
+    if (new URLSearchParams(window.location.search).has("reset")) {
+      localStorage.removeItem(STORAGE_KEY);
+    }
+
     // Already-engaged kiosk (e.g. after a reboot) should go straight to the
     // globe, not replay the attract screen — /globe/ is a static page
     // outside the Next.js router, so a full navigation is required rather
