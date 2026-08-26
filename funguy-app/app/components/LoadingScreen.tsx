@@ -12,10 +12,15 @@ const TEXTS = [
   "Talk to the fun-guy in front of you and learn how to leave the world better than you find it",
 ]
 
-// Kiosk display (the /globe attract screen, no touchscreen interaction) —
+// Kiosk display (the /begin attract screen, no touchscreen interaction) —
 // same narrative, plus a final instructional line replacing the phone's
 // tappable CTA below, since there's nothing to click on a passive display.
 const KIOSK_TEXTS = [...TEXTS, "Tap your phone on the rock to begin"]
+
+// Phone entry (the actual chat app) skips the narrative cycle entirely —
+// a visitor who scans/taps should land straight on the slide with the
+// begin button, not wait through the two intro texts first.
+const PHONE_TEXTS = [TEXTS[TEXTS.length - 1]]
 
 const MORPH = 1.2  // seconds to blur in or blur out
 const HOLD  = 3.8  // seconds each text stays fully visible
@@ -26,12 +31,9 @@ const TRANS_DUR = MORPH * 2 + HOLD  // 6.2s
 const T_IN   = ((MORPH           / TRANS_DUR) * 100).toFixed(3)  // fully visible
 const T_HOLD = (((MORPH + HOLD)  / TRANS_DUR) * 100).toFixed(3)  // start fading out
 
-// Text 3: in → hold → stay (never fades out)
+// Last text: in → hold → stay (never fades out)
 const LAST_DUR = MORPH + HOLD  // 5s
 const T_LAST_IN = ((MORPH / LAST_DUR) * 100).toFixed(3)
-
-// Show the CTA after text 3 has fully morphed in
-const BUTTON_DELAY_MS = (SLOT * 2 + MORPH) * 1000
 
 export default function LoadingScreen({
   onEnter,
@@ -40,14 +42,21 @@ export default function LoadingScreen({
   onEnter?: () => void
   mode?: "phone" | "kiosk"
 }) {
-  const texts = mode === "kiosk" ? KIOSK_TEXTS : TEXTS
+  const texts = mode === "kiosk" ? KIOSK_TEXTS : PHONE_TEXTS
   const [showButton, setShowButton] = useState(false)
+
+  // Show the CTA once the (mode-dependent) last slide has fully morphed
+  // in. Generalized from a hardcoded 3-text formula — plugging in the old
+  // 3-item array here reproduces the same delay, so kiosk timing is
+  // unaffected; a 1-item phone array collapses this to just `MORPH`
+  // seconds, since there's no cycle to wait through first.
+  const buttonDelayMs = (SLOT * (texts.length - 1) + MORPH) * 1000
 
   useEffect(() => {
     if (mode === "kiosk") return // no CTA to show — the last text is the instruction itself
-    const t = setTimeout(() => setShowButton(true), BUTTON_DELAY_MS)
+    const t = setTimeout(() => setShowButton(true), buttonDelayMs)
     return () => clearTimeout(t)
-  }, [mode])
+  }, [mode, buttonDelayMs])
 
   const rawId    = useId()
   const safeId   = rawId.replace(/[^a-zA-Z0-9]/g, "")

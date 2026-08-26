@@ -24,8 +24,8 @@
   const HEALTH_MAX = config.HEALTH_MAX || 100;
 
   // Testing convenience — visiting ?reset clears saved progress with no
-  // console/devtools needed. Same key /globe-attract uses, so it clears
-  // for both pages at once (they share localStorage on this origin).
+  // console/devtools needed. Same key /begin uses, so it clears for both
+  // pages at once (they share localStorage on this origin).
   if (new URLSearchParams(location.search).has('reset')) {
     localStorage.removeItem(STORAGE_KEY);
   }
@@ -61,18 +61,18 @@
 
   // --- attract mode handoff ----------------------------------------------
   // The actual attract screen (mushroom model + morphing welcome text) is
-  // /globe-attract, a real Next.js page reusing the chat app's own
-  // LoadingScreen component in a "kiosk" mode — not reimplemented here.
-  // This page just needs to: (a) bounce there immediately if nobody's ever
-  // engaged yet, and (b) bounce back there after a long idle gap. Both are
-  // full navigations (window.location), since /globe-attract lives outside
-  // this static page's own scope.
-  const IDLE_THRESHOLD_MS = 3 * 60 * 1000; // 3 min of no messages -> back to attract mode. Tune here.
+  // /begin, a real Next.js page reusing the chat app's own LoadingScreen
+  // component in a "kiosk" mode — not reimplemented here. This page just
+  // needs to: (a) bounce there immediately if nobody's ever engaged yet,
+  // and (b) bounce back there after a long idle gap. Both are full
+  // navigations (window.location), since /begin lives outside this static
+  // page's own scope.
+  const IDLE_THRESHOLD_MS = 2 * 60 * 1000; // 2 min of no messages -> back to attract mode. Tune here.
   const IDLE_CHECK_INTERVAL_MS = 15000;
   const isDebug = new URLSearchParams(location.search).has('debug');
 
   if (state.messageCount === 0 && !isDebug) {
-    location.href = '/globe-attract';
+    location.href = '/begin';
     return;
   }
 
@@ -80,7 +80,7 @@
 
   setInterval(() => {
     if (Date.now() - lastMessageAt > IDLE_THRESHOLD_MS) {
-      location.href = '/globe-attract';
+      location.href = '/begin';
     }
   }, IDLE_CHECK_INTERVAL_MS);
 
@@ -213,7 +213,9 @@
     const EARTH_IMAGE_URL = 'assets/earth-blue-marble.jpg';
     const BUMP_IMAGE_URL = 'assets/earth-topology.png';
     const SPECULAR_MAP_URL = 'assets/earth-water.png'; // white=ocean, black=land
-    const OCEAN_TARGET = [110, 220, 225]; // aqua/turquoise
+    // aqua/turquoise, 10% less saturated than the original [110, 220, 225]
+    // (converted to HSL, S cut from 0.657 to 0.591, converted back).
+    const OCEAN_TARGET = [116, 215, 219];
     // Raised close to 1 so deep/shallow ocean pixels converge toward
     // nearly the same light target color — subtle variation between the
     // two rather than a stark light/dark contrast.
