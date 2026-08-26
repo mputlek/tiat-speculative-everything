@@ -3,27 +3,14 @@
 
   "topics": [
     {
-      "id": "sustenance",
-      "label": "Sustenance",
-      "illustration": "sustenance",
+      "id": "intro",
+      "label": "Intro",
+      "illustration": "intro",
       "questions": [
-        "How do you get your food?",
-        "Do you need sunlight?",
-        "Do you ever sleep?",
-        "How big is your network?",
-        "How do you get oxygen underground?"
-      ]
-    },
-    {
-      "id": "needs",
-      "label": "Needs",
-      "illustration": "needs",
-      "questions": [
-        "What do you need from humans?",
-        "Can you survive without trees?",
-        "What threatens you most?",
-        "Do you feel pain?",
-        "What makes you thrive?"
+        "What is mycelium?",
+        "Why are you called Wood Wide Web?",
+        "How does your network work?",
+        "How did you help humans in the past few decades?"
       ]
     },
     {
@@ -31,35 +18,11 @@
       "label": "2075",
       "illustration": "world",
       "questions": [
-        "How has the world changed since 2025?",
-        "How do humans use you now?",
-        "Are you happier in 2075?",
-        "What do you wish humans understood sooner?",
-        "What's the biggest change you've seen?"
-      ]
-    },
-    {
-      "id": "collabs",
-      "label": "Collabs",
-      "illustration": "collab",
-      "questions": [
-        "Which tree is your closest friend?",
-        "Do animals talk to you?",
-        "How do you help forests recover?",
-        "Do you ever compete with other networks?",
-        "What's the strangest thing you've shared with a tree?"
-      ]
-    },
-    {
-      "id": "applications",
-      "label": "Applications",
-      "illustration": "applications",
-      "questions": [
-        "How are humans using you to build things?",
-        "Can you replace plastic?",
-        "Are you used in medicine?",
-        "What's the most surprising way humans use you?",
-        "Could you help clean up pollution?"
+        "How do people in 2075 talk about the climate crisis of the 2020s-2050s?",
+        "How is AI used in a sustainable way that does not damage the environment of the mycelium and humans?",
+        "How do people work together differently now that they understand interconnection?",
+        "How do laws protect mycelium rights in this world?",
+        "What happened to corporations and industries that fought regeneration?"
       ]
     },
     {
@@ -67,11 +30,73 @@
       "label": "Values",
       "illustration": "values",
       "questions": [
-        "What do you believe in?",
-        "Is sharing always good?",
-        "Do you have a sense of fairness?",
-        "What would you change about humans?",
-        "What gives you hope?"
+        "When did humans stop seeing nature as a resource to exploit and start seeing it as a partner?",
+        "How did the mindset shift from 'dominate nature' to 'work with nature'?",
+        "What does it mean to repair instead of replace in your world?",
+        "How important is community in 2075, and how does that show in daily life?",
+        "What would you say to someone who still believes humans are the most important species?"
+      ]
+    },
+    {
+      "id": "sustenance",
+      "label": "Sustenance",
+      "illustration": "sustenance",
+      "questions": [
+        "What do you absolutely need to survive?",
+        "What's killing you right now?",
+        "Why is darkness better for mycelium growth?",
+        "Can you live in my house?",
+        "Why do some mycelium prefer dead wood while others prefer leaves or grass?"
+      ]
+    },
+    {
+      "id": "collabs",
+      "label": "Collabs",
+      "illustration": "collab",
+      "questions": [
+        "What would you want humans to understand about old-growth forests that they don't realize now?",
+        "What's different about ant colonies that have strong mycelium partnerships?",
+        "What's the scariest thing humans have done to you, and what was the moment you knew they could change?",
+        "Are bacteria your partners, competitors, or something more complex?",
+        "How do algae and mycelium work together in ecosystems?",
+        "How is your relationship with forests?",
+        "How do you work with ants?"
+      ]
+    },
+    {
+      "id": "applications",
+      "label": "Applications",
+      "illustration": "applications",
+      "questions": [
+        "How does vertical mycelium farming work in cities in 2075?",
+        "How long does it take you to clean up a polluted site compared to traditional remediation?",
+        "Can mycelium textiles be designed to last forever, or are they meant to decompose?",
+        "How has growing food with mycelium changed the taste and nutrition of what humans eat?",
+        "How are artists using mycelium as a medium for creative expression?"
+      ]
+    },
+    {
+      "id": "actions",
+      "label": "Actions",
+      "illustration": "actions",
+      "questions": [
+        "What's the best way to add mycelium to garden soil?",
+        "How can I help expand healthy mycelium networks?",
+        "How can permaculture help your growth?",
+        "How does climate affect where you can live?",
+        "What plants should I grow together with mycelium?"
+      ]
+    },
+    {
+      "id": "digging-deeper",
+      "label": "Digging Deeper",
+      "illustration": "digging-deeper",
+      "questions": [
+        "What did indigenous peoples know about you that modern science forgot?",
+        "What's beautiful about decomposition that humans are just starting to appreciate?",
+        "What's the difference between healthy caution around toxic fungi and irrational fear?",
+        "Why do I need to talk to you through a sculpture instead of just experiencing you directly in nature?",
+        "If I leave here today and forget everything, what's the one thing you hope I remember?"
       ]
     }
   ]

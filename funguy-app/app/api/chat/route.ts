@@ -23,6 +23,12 @@ function getPersonality(): string {
   return JSON.parse(raw).personality;
 }
 
+// Worldbuilding Q&A lore, kept as a separate markdown file (not JSON) since it's
+// prose, not config — read fresh per-request same as getPersonality() above.
+function getKnowledgeBase(): string {
+  return readFileSync(join(process.cwd(), "content/fun-guy-knowledge.md"), "utf-8");
+}
+
 // Best-effort, one-shot publish per request via Ably's REST client — no
 // persistent Realtime connection needed in a serverless function. Any
 // failure (missing key, network error, Ably outage) is caught here so it
@@ -49,6 +55,14 @@ export async function POST(request: Request) {
   const { messages } = await request.json();
 
   const personality = getPersonality();
+  const knowledge = getKnowledgeBase();
+  const systemPrompt = `${personality}
+
+Background knowledge — draw on these facts to ground your answers, but never quote
+them at length or copy their length/format. Always stay in your normal 1–3 sentence
+voice.
+
+${knowledge}`;
 
   const lastUserMessage = [...messages]
     .reverse()
@@ -66,7 +80,7 @@ export async function POST(request: Request) {
       // before producing the visible reply, on top of it.
       max_output_tokens: 4096,
       input: [
-        { role: "system", content: personality },
+        { role: "system", content: systemPrompt },
         ...messages.map((m: { role: string; content: string }) => ({
           role: m.role,
           content: m.content,
