@@ -49,18 +49,15 @@ html, body {
   color: #d97757;
 }
 
-.stage {
-  font-size: 1.6rem;
-  font-weight: 700;
+.planetHealthLine {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #4a3b36;
   margin: 0 0 12px;
 }
 
-.planetHealthLabel {
-  font-size: 0.7rem;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: #8f8378;
-  margin: 0 0 6px;
+.stageWord {
+  font-weight: 700;
 }
 
 .healthBarRow {

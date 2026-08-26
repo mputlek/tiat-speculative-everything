@@ -41,10 +41,14 @@
   }
 
   // --- persisted state (survives page reload on the kiosk machine) -------
-  let state = { healthValue: 0, messageCount: 0 };
+  let state = { healthValue: 0, messageCount: 0, totalPoints: 0 };
   try {
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
-    if (saved && typeof saved.healthValue === 'number') state = saved;
+    if (saved && typeof saved.healthValue === 'number') {
+      state = saved;
+      // Backfill for state saved before totalPoints existed.
+      if (typeof state.totalPoints !== 'number') state.totalPoints = 0;
+    }
   } catch (e) {
     /* ignore corrupt storage */
   }
@@ -101,7 +105,7 @@
     fillEl.style.backgroundColor = color;
     stageEl.textContent = stageForHealth(state.healthValue);
     percentEl.textContent = `${Math.round(t * 100)}%`;
-    countEl.textContent = `${state.messageCount} message${state.messageCount === 1 ? '' : 's'} received`;
+    countEl.textContent = `${state.totalPoints} healing point${state.totalPoints === 1 ? '' : 's'} earned`;
   }
 
   // --- healing-action feed -------------------------------------------
@@ -152,6 +156,7 @@
     const baseIncrement = config.HEALTH_INCREMENT || 2;
     const healthDelta = (points / POINTS_AVG) * baseIncrement;
     state.healthValue = Math.min(HEALTH_MAX, state.healthValue + healthDelta);
+    state.totalPoints += points;
     saveState();
     render();
     pushActionEntry(points);
@@ -182,6 +187,7 @@
       lastMessageAt = Date.now();
       state.messageCount = count;
       state.healthValue = Math.min(HEALTH_MAX, count * healthIncrement);
+      state.totalPoints = Math.round(count * POINTS_AVG);
       debugSliderValue.textContent = String(count);
       saveState();
       render();
