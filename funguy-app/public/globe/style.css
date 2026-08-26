@@ -76,9 +76,73 @@ html, body {
   margin: 8px 0 0;
 }
 
+/* Running log of "healing actions" — one line appended each time a chat
+   message bumps the health bar, making the metaphor explicit: talking to
+   the mushroom translates to real actions that heal the world. */
+.actionFeed {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 10px 0 0;
+  min-height: 0;
+}
+
+.actionEntry {
+  margin: 0;
+  font-size: 0.8rem;
+  color: #6b5d58;
+  opacity: 0;
+  animation: actionEntryIn 0.6s ease-out forwards;
+}
+
+@keyframes actionEntryIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Bottom banner scrolling through the Q&A pairs one at a time. */
+.qaBanner {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 44px;
+  overflow: hidden;
+  background: rgba(243, 230, 235, 0.92);
+  border-top: 1px solid rgba(74, 59, 54, 0.15);
+  pointer-events: none;
+}
+
+.qaBannerTrack {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  white-space: nowrap;
+  font-size: 0.85rem;
+  color: #4a3b36;
+  will-change: transform;
+}
+
+@keyframes qaScroll {
+  from {
+    transform: translateX(var(--start-x, 100vw));
+  }
+  to {
+    transform: translateX(var(--end-x, -100%));
+  }
+}
+
 .debugPanel {
   position: fixed;
-  bottom: 20px;
+  bottom: 76px;
   left: 20px;
   right: 20px;
   max-width: 420px;

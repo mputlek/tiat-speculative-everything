@@ -3,6 +3,8 @@
   const stageEl = document.getElementById('stage');
   const fillEl = document.getElementById('healthBarFill');
   const countEl = document.getElementById('healthCount');
+  const actionFeedEl = document.getElementById('actionFeed');
+  const qaTrackEl = document.getElementById('qaBannerTrack');
 
   // Fetched at load time from a Next.js API route rather than a build-time-
   // generated shared/config.js — this page now lives in the Next.js app's
@@ -92,12 +94,46 @@
     countEl.textContent = `${state.messageCount} message${state.messageCount === 1 ? '' : 's'} received`;
   }
 
+  // --- healing-action feed -------------------------------------------
+  // Every real message fires one of these into the feed under the health
+  // bar — makes the metaphor explicit: talking to the mushroom translates
+  // to real actions that heal the world. Purely decorative/in-session, not
+  // persisted (health/messageCount persistence is unaffected).
+  const ACTION_PHRASES = [
+    '🌱 planted plants', '💧 restored a wetland', '🍄 grew mushrooms indoors',
+    '🌳 protected an old-growth tree', '♻️ started composting',
+    '🧑‍🌾 built a community garden', '🐜 left dead wood for the soil',
+    '🌍 cleaned up a polluted site', '🤝 shared seeds with a neighbor',
+    '🪱 fed the soil', '🌾 grew food without pesticides',
+    '🍂 returned nutrients to the earth', '🦋 created habitat for pollinators',
+    '🌲 supported a forest network', '💚 chose regeneration over extraction',
+  ];
+  const MAX_FEED_ENTRIES = 5;
+  let lastPhrase = null;
+
+  function pushActionEntry() {
+    let phrase;
+    do {
+      phrase = ACTION_PHRASES[Math.floor(Math.random() * ACTION_PHRASES.length)];
+    } while (phrase === lastPhrase && ACTION_PHRASES.length > 1);
+    lastPhrase = phrase;
+
+    const entry = document.createElement('p');
+    entry.className = 'actionEntry';
+    entry.textContent = phrase;
+    actionFeedEl.appendChild(entry);
+    if (actionFeedEl.children.length > MAX_FEED_ENTRIES) {
+      actionFeedEl.removeChild(actionFeedEl.firstChild);
+    }
+  }
+
   function onMessageReceived() {
     lastMessageAt = Date.now();
     state.messageCount += 1;
     state.healthValue = Math.min(HEALTH_MAX, state.healthValue + (config.HEALTH_INCREMENT || 2));
     saveState();
     render();
+    pushActionEntry();
   }
 
   render();
@@ -155,6 +191,46 @@
     console.log('Received message from mycelium visitor:', msg.data);
     onMessageReceived();
   });
+
+  // --- Q&A banner ---------------------------------------------------------
+  // Scrolling one-liner at the bottom of the page, cycling through the Q&A
+  // pairs one at a time — independent of the globe visuals below, same
+  // reasoning as the Ably setup above.
+  (async function setUpQaBanner() {
+    let qaPairs = [];
+    try {
+      const data = await fetch('/api/globe-qa').then((r) => r.json());
+      qaPairs = data.pairs || [];
+    } catch (e) {
+      qaPairs = [];
+    }
+    // Shuffle once per page load for variety across sessions.
+    for (let i = qaPairs.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [qaPairs[i], qaPairs[j]] = [qaPairs[j], qaPairs[i]];
+    }
+
+    const SCROLL_SPEED_PX_PER_SEC = 80; // tune for readability
+    let qaIndex = 0;
+
+    function showNextQaPair() {
+      if (!qaPairs.length) return;
+      const pair = qaPairs[qaIndex % qaPairs.length];
+      qaIndex++;
+      qaTrackEl.textContent = `🍄 ${pair.question} — ${pair.answer}`;
+      qaTrackEl.style.animation = 'none';
+      void qaTrackEl.offsetWidth; // force reflow so the animation restarts cleanly
+      const trackWidth = qaTrackEl.scrollWidth;
+      const viewportWidth = window.innerWidth;
+      qaTrackEl.style.setProperty('--start-x', `${viewportWidth}px`);
+      qaTrackEl.style.setProperty('--end-x', `${-trackWidth}px`);
+      const duration = (trackWidth + viewportWidth) / SCROLL_SPEED_PX_PER_SEC;
+      qaTrackEl.style.animation = `qaScroll ${duration}s linear forwards`;
+    }
+
+    qaTrackEl.addEventListener('animationend', showNextQaPair);
+    if (qaPairs.length) showNextQaPair();
+  })();
 
   // --- globe visuals ------------------------------------------------------
   // Everything below is best-effort: if texture loading or canvas

@@ -21,6 +21,7 @@
     <div class="healthBar">
       <div class="healthBarFill" id="healthBarFill"></div>
     </div>
+    <div class="actionFeed" id="actionFeed"></div>
     <p class="healthCount" id="healthCount">0 messages received</p>
   </div>
 
@@ -31,6 +32,11 @@
   <div class="debugPanel" id="debugPanel" hidden>
     <label for="debugSlider">debug: messages received (<span id="debugSliderValue">0</span>)</label>
     <input type="range" id="debugSlider" min="0" max="50" value="0" step="1" />
+  </div>
+
+  <!-- Scrolling one-liner cycling through the Q&A pairs, one at a time. -->
+  <div class="qaBanner" id="qaBanner">
+    <div class="qaBannerTrack" id="qaBannerTrack"></div>
   </div>
 
   <script src="https://cdn.ably.com/lib/ably.min-2.js"></script>
