@@ -33,7 +33,7 @@ export default function Header({ onPickTopic, onShowChat, onShowMessage, view }:
         className={`flex items-center gap-1.5 px-3.5 py-2 rounded-full text-sm transition-colors ${
           view === "message"
             ? "bg-[var(--color-interactive-primary)] text-white"
-            : "border border-[var(--color-border-default)] text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-tertiary)]"
+            : "border border-[var(--color-border-default)] text-[var(--color-icon-primary)] hover:bg-[var(--color-bg-tertiary)]"
         }`}
       >
         <Image

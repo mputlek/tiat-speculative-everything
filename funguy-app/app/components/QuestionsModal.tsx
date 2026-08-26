@@ -12,7 +12,7 @@ interface QuestionsModalProps {
 
 export default function QuestionsModal({ topic, onAsk, onBack, onClose }: QuestionsModalProps) {
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="absolute inset-0 bg-black/30" onClick={onClose} />
       <div className="relative bg-[var(--color-bg-secondary)] rounded-[18px] w-full max-w-sm p-6" style={{ boxShadow: "0 12px 24px rgba(0,0,0,0.17)" }}>
         <div className="flex items-start justify-between mb-6">

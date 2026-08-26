@@ -37,59 +37,56 @@ export default function MessageView() {
   }
 
   return (
-    <div className="flex flex-col items-center px-8 pt-16 pb-12 gap-9">
-      <p
-        className="text-2xl font-medium text-center leading-snug tracking-tight"
-        style={{ color: "var(--color-text-system)" }}
-      >
-        How do you feel about mycelium and fungi now? Have you learnt anything here that changed
-        your perspective?
-      </p>
+    <div className="h-full flex flex-col justify-between pt-8 pb-12 px-8">
+      {/* Top: question + text input */}
+      <div className="flex flex-col items-center gap-9">
+        <p className="text-2xl font-medium text-[var(--color-text-secondary)] text-center leading-[1.2] tracking-[-0.48px]">
+          How do you feel about mycelium and fungi now? Have you learnt anything here that changed
+          your perspective?
+        </p>
 
-      {/* Message box */}
-      <div
-        className="relative w-full flex flex-col rounded-sm overflow-hidden"
-        style={{ height: 273, boxShadow: "1px 0px 4px 0px rgba(122,122,122,0.22)" }}
-      >
-        <GridBackground />
-        <div className="relative z-10 flex flex-col h-full p-4 gap-2.5">
-          <textarea
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            onKeyDown={(e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) handleSend(); }}
-            placeholder="Type here..."
-            className="flex-1 resize-none bg-transparent outline-none leading-snug placeholder:text-[var(--color-text-placeholder)] text-[var(--color-text-primary)]"
-            style={{ fontSize: text ? 20 : 16, fontWeight: text ? 500 : 400, minHeight: 0 }}
-          />
-          {text.trim() && (
-            <button
-              onClick={handleSend}
-              className="flex items-center justify-center gap-2 h-11 rounded-full bg-[var(--color-interactive-accent)] shrink-0 self-center transition-opacity hover:opacity-90 active:scale-[0.98]"
-              style={{ width: 300 }}
-            >
-              <span className="text-sm font-semibold text-[var(--color-text-accent)]">
-                Send Message
-              </span>
-              <Image src="/assets/icon-arrow-right.svg" alt="" width={14} height={14} />
-            </button>
-          )}
+        {/* Message box */}
+        <div
+          className="relative w-full flex flex-col rounded-sm overflow-hidden"
+          style={{ height: 273, boxShadow: "1px 0px 4px 0px rgba(122,122,122,0.22)" }}
+        >
+          <GridBackground />
+          <div className="relative z-10 flex flex-col h-full p-4 gap-2.5">
+            <textarea
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) handleSend(); }}
+              placeholder="Type here..."
+              className="flex-1 resize-none bg-transparent outline-none leading-snug placeholder:text-[var(--color-text-placeholder)] text-[var(--color-text-primary)]"
+              style={{ fontSize: text ? 20 : 16, fontWeight: text ? 500 : 400, minHeight: 0 }}
+            />
+            {text.trim() && (
+              <button
+                onClick={handleSend}
+                className="flex items-center justify-center gap-2 h-11 rounded-full bg-[var(--color-interactive-accent)] shrink-0 self-center transition-opacity hover:opacity-90 active:scale-[0.98]"
+                style={{ width: 300 }}
+              >
+                <span className="text-sm font-semibold text-[var(--color-text-accent)]">
+                  Send Message
+                </span>
+                <Image src="/assets/icon-arrow-right.svg" alt="" width={14} height={14} />
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
-      {/* Mushroom + fixed-height compost scatter zone */}
+      {/* Bottom: mushroom + compost scatter zone — pinned to bottom */}
       <div className="flex flex-col items-center w-full">
         <Image
           src="/assets/mushroom-message.png"
           alt="mycelium"
           width={165}
           height={84}
-          className="object-contain"
+          className="object-contain shrink-0"
         />
-
-        {/* Fixed-height zone — items scatter here, no scroll added */}
-        <div className="relative w-full" style={{ height: 140 }}>
+        <div className="relative w-full" style={{ height: 100 }}>
           {compostItems.map((item) => (
-            /* Outer div: positions the anchor point; inner p: animates the fall */
             <div
               key={item.id}
               className="absolute"

@@ -21,7 +21,7 @@ const illustrationMap: Record<string, string> = {
 
 export default function TopicModal({ topics, onSelect, onClose }: TopicModalProps) {
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="absolute inset-0 bg-black/30" onClick={onClose} />
       <div
         className="relative bg-[var(--color-bg-secondary)] rounded-[18px] w-full max-w-sm p-6"

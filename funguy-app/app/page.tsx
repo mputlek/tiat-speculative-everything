@@ -6,6 +6,7 @@ import Header from "./components/Header";
 import TopicModal from "./components/TopicModal";
 import QuestionsModal from "./components/QuestionsModal";
 import MessageView from "./components/MessageView";
+import LoadingScreen from "./components/LoadingScreen";
 import { Topic, Message } from "./types";
 import funGuyData from "../content/fun-guy.json";
 
@@ -14,6 +15,7 @@ type Modal = null | { type: "topics" } | { type: "questions"; topic: Topic };
 const GREETING = "Hello, friend! I'm the mycelium network beneath your feet. I've been listening, growing and connecting everything for millions of years. What would you like to know about me?";
 
 export default function Home() {
+  const [intro, setIntro] = useState(true);
   const [view, setView] = useState<"home" | "chat" | "message">("home");
   const [modal, setModal] = useState<Modal>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -79,7 +81,8 @@ export default function Home() {
   }
 
   return (
-    <div className="flex flex-col h-full w-full sm:max-w-sm sm:mx-auto relative">
+    <div className="flex flex-col h-full w-full relative">
+      {intro && <LoadingScreen onEnter={() => setIntro(false)} />}
       <Header
         view={view}
         onPickTopic={() => setModal({ type: "topics" })}
@@ -87,7 +90,7 @@ export default function Home() {
         onShowMessage={() => setView("message")}
       />
 
-      <main className="flex-1 overflow-y-auto">
+      <main className={`flex-1 min-h-0 ${view === "message" ? "overflow-hidden" : "overflow-y-auto"}`}>
         {view === "home" && <HomeView onQuestion={sendMessage} />}
         {view === "chat" && (
           <ChatView messages={messages} loading={loading} bottomRef={messagesEndRef} />
@@ -180,12 +183,7 @@ function HomeView({ onQuestion }: { onQuestion: (q: string) => void }) {
       <div className="w-full mb-6">
         <div className="flex justify-center mb-4">
           <span className="text-xs font-semibold text-[var(--color-text-tertiary)] bg-[var(--color-bg-tertiary)] rounded-full px-3 py-1">
-            Today,{" "}
-            {new Date().toLocaleDateString("en-GB", {
-              day: "numeric",
-              month: "short",
-              year: "numeric",
-            })}
+            Today, 19 Aug 2075
           </span>
         </div>
         <p className="text-xl font-medium text-[var(--color-text-primary)] text-center leading-snug">
@@ -233,12 +231,7 @@ function ChatView({
     <div className="flex flex-col gap-3 px-4 py-4">
       <div className="flex justify-center mb-2">
         <span className="text-xs font-semibold text-[var(--color-text-tertiary)] bg-[var(--color-bg-tertiary)] rounded-full px-3 py-1">
-          Today,{" "}
-          {new Date().toLocaleDateString("en-GB", {
-            day: "numeric",
-            month: "short",
-            year: "numeric",
-          })}
+          Today, 19 Aug 2075
         </span>
       </div>
 
@@ -259,7 +252,7 @@ function ChatView({
 function ReceivedBubble({ text }: { text: string }) {
   return (
     <div className="max-w-[80%] self-start">
-      <div className="bg-[var(--color-surface-default)] rounded-2xl rounded-tl-sm px-4 py-3 text-sm text-[var(--color-text-primary)] leading-relaxed shadow-sm">
+      <div className="bg-[var(--color-surface-default)] rounded-2xl rounded-tl-sm px-4 py-3 text-[15px] text-[var(--color-text-primary)] leading-relaxed shadow-sm">
         {text}
       </div>
     </div>
@@ -269,7 +262,7 @@ function ReceivedBubble({ text }: { text: string }) {
 function SentBubble({ text }: { text: string }) {
   return (
     <div className="max-w-[80%] self-end">
-      <div className="bg-[var(--color-interactive-primary)] rounded-2xl rounded-tr-sm px-4 py-3 text-sm text-[var(--color-text-accent)] leading-relaxed">
+      <div className="bg-[var(--color-interactive-primary)] rounded-2xl rounded-tr-sm px-4 py-3 text-[15px] text-[var(--color-text-accent)] leading-relaxed">
         {text}
       </div>
     </div>
