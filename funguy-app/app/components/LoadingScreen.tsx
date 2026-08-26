@@ -58,6 +58,25 @@ export default function LoadingScreen({
     return () => clearTimeout(t)
   }, [mode, buttonDelayMs])
 
+  // Kiosk mode is a passive display with nobody to tap a button, so instead
+  // of freezing on the last slide it should just keep cycling indefinitely.
+  // CSS keyframes can't express "loop after N different per-text delays" on
+  // their own without duplicating the whole timeline into percentage math,
+  // so this drives the loop from JS instead: every full cycle, bump a key
+  // that remounts the text `<p>` elements, which restarts their (unchanged,
+  // one-shot) CSS animations from scratch. The last slide also switches to
+  // the same fade-out animation the others use (see animationFor below) —
+  // its fade-out finishes exactly when this timer fires, so the restart
+  // lands as a continuation of the same crossfade rhythm, not a hard cut.
+  const cycleDurationMs = (SLOT * (texts.length - 1) + TRANS_DUR) * 1000
+  const [cycleKey, setCycleKey] = useState(0)
+
+  useEffect(() => {
+    if (mode !== "kiosk") return
+    const t = setInterval(() => setCycleKey((k) => k + 1), cycleDurationMs)
+    return () => clearInterval(t)
+  }, [mode, cycleDurationMs])
+
   const rawId    = useId()
   const safeId   = rawId.replace(/[^a-zA-Z0-9]/g, "")
   const filterId = `goo-${safeId}`
@@ -80,7 +99,11 @@ export default function LoadingScreen({
 
   const animationFor = (i: number) => {
     const isLast = i === texts.length - 1
-    return isLast
+    // Only a non-looping last slide (phone mode's single-item array) stays
+    // frozen in place — kiosk mode's last slide fades out like every other
+    // text so the cycle-restart above reads as a continuation, not a jump.
+    const shouldStay = isLast && mode !== "kiosk"
+    return shouldStay
       ? `${animStay} ${LAST_DUR}s ${(SLOT * i).toFixed(3)}s 1 ease-in-out forwards`
       : `${animOut}  ${TRANS_DUR}s ${(SLOT * i).toFixed(3)}s 1 ease-in-out forwards`
   }
@@ -108,8 +131,10 @@ export default function LoadingScreen({
         <MushroomModel />
       </div>
 
-      {/* Morphing text area */}
-      <div className="flex-1 relative" style={{ filter: `url(#${filterId})` }}>
+      {/* Morphing text area — keyed on cycleKey (kiosk mode only; stays 0
+          otherwise) so each loop remounts the <p> elements below, which
+          restarts their one-shot CSS animations from the beginning. */}
+      <div key={cycleKey} className="flex-1 relative" style={{ filter: `url(#${filterId})` }}>
         {texts.map((text, i) => (
           <p
             key={i}
