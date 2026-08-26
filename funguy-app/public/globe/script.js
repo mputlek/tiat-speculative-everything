@@ -1,4 +1,11 @@
 (async function () {
+  // Kiosk hardening: no keyboard is exposed to visitors at this display,
+  // so the right-click context menu (Back/Reload/Inspect/etc.) is the main
+  // remaining escape route via mouse/trackpad. Blocked unconditionally --
+  // this page only ever runs on the kiosk display, never a visitor's own
+  // device.
+  document.addEventListener('contextmenu', (e) => e.preventDefault());
+
   const statusEl = document.getElementById('status');
   const stageEl = document.getElementById('stage');
   const fillEl = document.getElementById('healthBarFill');
