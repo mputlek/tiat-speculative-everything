@@ -13,6 +13,20 @@
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
+  <!-- Shown before any visitor has ever engaged (and again after a long
+       idle gap) — cycles between the 3D mushroom model and welcome text,
+       then reveals the globe below on the first message received. -->
+  <div id="attractMode">
+    <canvas id="mushroomCanvas"></canvas>
+    <div id="attractText">
+      <p class="attractTitle">Talk to the fun-guy</p>
+      <p class="attractSubtitle">
+        I'm the mycelium network beneath your feet — say hello, and watch
+        this world start to heal.
+      </p>
+    </div>
+  </div>
+
   <div id="globeViz"></div>
 
   <div class="overlay">
