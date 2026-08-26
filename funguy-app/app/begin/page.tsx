@@ -12,14 +12,13 @@ export default function BeginPage() {
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    // A direct/manual visit to /begin (kiosk boot, QR/NFC target, someone
-    // typing the URL) is always the reset-and-attract entry point — no
-    // ?reset param needed. But /globe/script.js's own idle-cycle-back also
-    // lands here (after 2 min of no messages) to show the attract screen
-    // again WITHOUT losing accumulated progress — it marks that handoff
-    // with ?resume, which skips the wipe.
-    const isResume = new URLSearchParams(window.location.search).has("resume");
-    if (!isResume) {
+    // /begin does NOT reset progress just by being loaded — it's visited
+    // both for a genuinely fresh start AND automatically (script.js's
+    // idle-cycle-back after 2 min of no messages), and the latter must
+    // preserve accumulated health. Same explicit-opt-in convention
+    // /globe/script.js already uses: visiting ?reset clears saved
+    // progress with no console/devtools needed.
+    if (new URLSearchParams(window.location.search).has("reset")) {
       localStorage.removeItem(STORAGE_KEY);
     }
 

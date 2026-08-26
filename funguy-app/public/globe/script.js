@@ -80,12 +80,7 @@
 
   setInterval(() => {
     if (Date.now() - lastMessageAt > IDLE_THRESHOLD_MS) {
-      // ?resume tells /begin this is an automatic idle handoff, not a
-      // manual/fresh visit — it should show the attract screen again
-      // without wiping the progress already accumulated (plain /begin
-      // always resets, which is right for a deliberate visit but would
-      // silently erase everything on every idle gap otherwise).
-      location.href = '/begin?resume=1';
+      location.href = '/begin';
     }
   }, IDLE_CHECK_INTERVAL_MS);
 
