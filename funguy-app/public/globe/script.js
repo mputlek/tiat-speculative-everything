@@ -3,6 +3,7 @@
   const stageEl = document.getElementById('stage');
   const fillEl = document.getElementById('healthBarFill');
   const countEl = document.getElementById('healthCount');
+  const percentEl = document.getElementById('healthPercent');
   const actionFeedEl = document.getElementById('actionFeed');
   const qaTrackEl = document.getElementById('qaBannerTrack');
 
@@ -46,9 +47,9 @@
   }
 
   function stageForHealth(h) {
-    if (h < 34) return 'Dormant';
-    if (h < 67) return 'Awakening';
-    return 'Thriving';
+    if (h < 34) return 'Barren';
+    if (h < 67) return 'Sprouting';
+    return 'Blooming';
   }
 
   // Health bar fill color lives here (not inside setUpGlobe below) so it
@@ -87,10 +88,12 @@
   }, IDLE_CHECK_INTERVAL_MS);
 
   function render() {
-    const color = lerpColor(DORMANT_COLOR, THRIVING_COLOR, state.healthValue / HEALTH_MAX);
+    const t = state.healthValue / HEALTH_MAX;
+    const color = lerpColor(DORMANT_COLOR, THRIVING_COLOR, t);
     fillEl.style.width = `${state.healthValue}%`;
     fillEl.style.backgroundColor = color;
     stageEl.textContent = stageForHealth(state.healthValue);
+    percentEl.textContent = `${Math.round(t * 100)}%`;
     countEl.textContent = `${state.messageCount} message${state.messageCount === 1 ? '' : 's'} received`;
   }
 
@@ -111,7 +114,7 @@
   const MAX_FEED_ENTRIES = 5;
   let lastPhrase = null;
 
-  function pushActionEntry() {
+  function pushActionEntry(points) {
     let phrase;
     do {
       phrase = ACTION_PHRASES[Math.floor(Math.random() * ACTION_PHRASES.length)];
@@ -120,20 +123,31 @@
 
     const entry = document.createElement('p');
     entry.className = 'actionEntry';
-    entry.textContent = phrase;
+    entry.innerHTML = `<span class="actionPoints">+${points}</span> ${phrase}`;
     actionFeedEl.appendChild(entry);
     if (actionFeedEl.children.length > MAX_FEED_ENTRIES) {
       actionFeedEl.removeChild(actionFeedEl.firstChild);
     }
   }
 
+  // Healing points shown per action are what actually drive that message's
+  // bar increment (scaled around POINTS_AVG so the long-run pacing still
+  // matches config.HEALTH_INCREMENT's ~300-messages-to-fill tuning) —
+  // bigger point rolls visibly move the bar more, not an unrelated number.
+  const POINTS_MIN = 1;
+  const POINTS_MAX = 5;
+  const POINTS_AVG = (POINTS_MIN + POINTS_MAX) / 2;
+
   function onMessageReceived() {
     lastMessageAt = Date.now();
     state.messageCount += 1;
-    state.healthValue = Math.min(HEALTH_MAX, state.healthValue + (config.HEALTH_INCREMENT || 2));
+    const points = POINTS_MIN + Math.floor(Math.random() * (POINTS_MAX - POINTS_MIN + 1));
+    const baseIncrement = config.HEALTH_INCREMENT || 2;
+    const healthDelta = (points / POINTS_AVG) * baseIncrement;
+    state.healthValue = Math.min(HEALTH_MAX, state.healthValue + healthDelta);
     saveState();
     render();
-    pushActionEntry();
+    pushActionEntry(points);
   }
 
   render();
