@@ -24,21 +24,6 @@ html, body {
   height: 100vh;
 }
 
-/* #globeViz and .overlay fade in on reveal, fade out on idle cycle-back —
-   opacity/visibility (not display: none) so transitions are smooth and,
-   for #globeViz specifically, so the WebGL context never gets torn down. */
-#globeViz,
-.overlay {
-  transition: opacity 1.2s ease-out;
-}
-
-#globeViz.hidden,
-.overlay.hidden {
-  opacity: 0;
-  visibility: hidden;
-  pointer-events: none;
-}
-
 .overlay {
   position: fixed;
   top: 24px;
@@ -46,60 +31,6 @@ html, body {
   right: 24px;
   max-width: 340px;
   pointer-events: none;
-}
-
-/* --- attract mode ------------------------------------------------------ */
-
-#attractMode {
-  position: fixed;
-  inset: 0;
-  z-index: 10;
-  background: #f3e6eb;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: opacity 1.2s ease-out;
-}
-
-#attractMode.hidden {
-  opacity: 0;
-  visibility: hidden;
-  pointer-events: none;
-}
-
-#mushroomCanvas,
-#attractText {
-  position: absolute;
-  inset: 0;
-  transition: opacity 1.5s ease-in-out;
-}
-
-#mushroomCanvas.pageHidden,
-#attractText.pageHidden {
-  opacity: 0;
-}
-
-#attractText {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  padding: 0 48px;
-}
-
-.attractTitle {
-  font-size: 2.4rem;
-  font-weight: 700;
-  margin: 0 0 16px;
-}
-
-.attractSubtitle {
-  font-size: 1.1rem;
-  color: #6b5d58;
-  max-width: 480px;
-  line-height: 1.5;
-  margin: 0;
 }
 
 .status {

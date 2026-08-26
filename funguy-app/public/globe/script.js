@@ -52,185 +52,30 @@
     return `rgb(${c[0]}, ${c[1]}, ${c[2]})`;
   }
 
-  // --- attract mode: rotating mushroom + welcome text until first message,
-  // cycling back after a long idle gap -------------------------------------
-  const attractModeEl = document.getElementById('attractMode');
-  const mushroomCanvas = document.getElementById('mushroomCanvas');
-  const attractTextEl = document.getElementById('attractText');
-  const globeVizEl = document.getElementById('globeViz');
-  const overlayEl = document.querySelector('.overlay');
-
-  const ATTRACT_PAGE_INTERVAL_MS = 6000;
+  // --- attract mode handoff ----------------------------------------------
+  // The actual attract screen (mushroom model + morphing welcome text) is
+  // /globe-attract, a real Next.js page reusing the chat app's own
+  // LoadingScreen component in a "kiosk" mode — not reimplemented here.
+  // This page just needs to: (a) bounce there immediately if nobody's ever
+  // engaged yet, and (b) bounce back there after a long idle gap. Both are
+  // full navigations (window.location), since /globe-attract lives outside
+  // this static page's own scope.
   const IDLE_THRESHOLD_MS = 3 * 60 * 1000; // 3 min of no messages -> back to attract mode. Tune here.
   const IDLE_CHECK_INTERVAL_MS = 15000;
+  const isDebug = new URLSearchParams(location.search).has('debug');
 
-  let isRevealed = state.messageCount > 0;
-  // Only set "now" if we're starting already-revealed (real prior activity)
-  // — starting at 0 would make a fresh, never-engaged kiosk look idle
-  // immediately and never matters anyway, since returnToAttractMode() only
-  // fires while isRevealed.
-  let lastMessageAt = isRevealed ? Date.now() : 0;
-
-  let mushroomRenderer = null;
-  let mushroomScene = null;
-  let mushroomCamera = null;
-  let mushroomControls = null;
-  let mushroomAnimationHandle = null;
-  let mushroomSceneBuildPromise = null;
-
-  function mushroomAnimateFrame() {
-    mushroomControls.update();
-    mushroomRenderer.render(mushroomScene, mushroomCamera);
-    mushroomAnimationHandle = requestAnimationFrame(mushroomAnimateFrame);
+  if (state.messageCount === 0 && !isDebug) {
+    location.href = '/globe-attract';
+    return;
   }
 
-  function startMushroomAnimation() {
-    if (mushroomAnimationHandle == null && mushroomRenderer) {
-      mushroomAnimateFrame();
-    }
-  }
+  let lastMessageAt = Date.now();
 
-  function stopMushroomAnimation() {
-    if (mushroomAnimationHandle != null) {
-      cancelAnimationFrame(mushroomAnimationHandle);
-      mushroomAnimationHandle = null;
-    }
-  }
-
-  // Built once, lazily, the first time attract mode is actually needed
-  // (initial load or a later idle cycle-back) — not eagerly on every page
-  // load, since a kiosk that's already been engaged with skips attract mode
-  // entirely and never needs this. Independent scene/canvas/renderer from
-  // Globe.gl's own — never shares a THREE instance across the two, so
-  // there's no repeat of the earlier clouds-layer version-conflict issue.
-  function ensureMushroomScene() {
-    if (mushroomSceneBuildPromise) return mushroomSceneBuildPromise;
-    mushroomSceneBuildPromise = (async () => {
-      try {
-        const THREE = await import('https://unpkg.com/three/build/three.module.js');
-        const { GLTFLoader } = await import(
-          'https://unpkg.com/three/examples/jsm/loaders/GLTFLoader.js'
-        );
-        const { OrbitControls } = await import(
-          'https://unpkg.com/three/examples/jsm/controls/OrbitControls.js'
-        );
-
-        mushroomRenderer = new THREE.WebGLRenderer({
-          canvas: mushroomCanvas,
-          antialias: true,
-          alpha: true,
-        });
-        mushroomRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-        mushroomRenderer.setSize(window.innerWidth, window.innerHeight);
-
-        mushroomScene = new THREE.Scene();
-        mushroomCamera = new THREE.PerspectiveCamera(
-          45,
-          window.innerWidth / window.innerHeight,
-          0.1,
-          100
-        );
-        mushroomCamera.position.set(0, 0, 5);
-
-        mushroomScene.add(new THREE.AmbientLight(0xffffff, 0.9));
-        const dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
-        dirLight.position.set(3, 5, 4);
-        mushroomScene.add(dirLight);
-
-        const gltf = await new GLTFLoader().loadAsync('/assets/mushroom-scan.glb');
-        const model = gltf.scene;
-
-        // Center + scale to a consistent on-screen size regardless of the
-        // source model's native dimensions.
-        const box = new THREE.Box3().setFromObject(model);
-        const size = box.getSize(new THREE.Vector3());
-        const center = box.getCenter(new THREE.Vector3());
-        model.position.sub(center);
-        const maxDim = Math.max(size.x, size.y, size.z) || 1;
-        model.scale.setScalar(2.4 / maxDim);
-        mushroomScene.add(model);
-
-        mushroomControls = new OrbitControls(mushroomCamera, mushroomRenderer.domElement);
-        mushroomControls.enableDamping = true;
-        mushroomControls.autoRotate = true;
-        mushroomControls.autoRotateSpeed = 1.5;
-        mushroomControls.enableZoom = false;
-        mushroomControls.enablePan = false;
-
-        window.addEventListener('resize', () => {
-          mushroomRenderer.setSize(window.innerWidth, window.innerHeight);
-          mushroomCamera.aspect = window.innerWidth / window.innerHeight;
-          mushroomCamera.updateProjectionMatrix();
-        });
-      } catch (err) {
-        // Best-effort, same as the globe's own texture/clouds/specular
-        // pieces — a failure here just means attract mode shows text only,
-        // never breaks the page.
-        console.error('Mushroom scene failed to load — showing text only:', err);
-      }
-    })();
-    return mushroomSceneBuildPromise;
-  }
-
-  let showingMushroomPage = true;
-  let pageCycleInterval = null;
-
-  function cycleAttractPage() {
-    showingMushroomPage = !showingMushroomPage;
-    mushroomCanvas.classList.toggle('pageHidden', !showingMushroomPage);
-    attractTextEl.classList.toggle('pageHidden', showingMushroomPage);
-  }
-
-  function startPageCycle() {
-    if (pageCycleInterval) return;
-    showingMushroomPage = true;
-    mushroomCanvas.classList.remove('pageHidden');
-    attractTextEl.classList.add('pageHidden');
-    pageCycleInterval = setInterval(cycleAttractPage, ATTRACT_PAGE_INTERVAL_MS);
-  }
-
-  function stopPageCycle() {
-    if (pageCycleInterval) {
-      clearInterval(pageCycleInterval);
-      pageCycleInterval = null;
-    }
-  }
-
-  function enterAttractMode() {
-    globeVizEl.classList.add('hidden');
-    overlayEl.classList.add('hidden');
-    attractModeEl.classList.remove('hidden');
-    ensureMushroomScene().then(startMushroomAnimation);
-    startPageCycle();
-  }
-
-  function revealGlobe() {
-    if (isRevealed) return;
-    isRevealed = true;
-    attractModeEl.classList.add('hidden');
-    globeVizEl.classList.remove('hidden');
-    overlayEl.classList.remove('hidden');
-    stopPageCycle();
-    stopMushroomAnimation();
-  }
-
-  function returnToAttractMode() {
-    if (!isRevealed) return;
-    isRevealed = false;
-    enterAttractMode();
-  }
-
-  // Runs continuously; only acts while revealed, so no need to start/stop
-  // it as attract/revealed state changes.
   setInterval(() => {
-    if (isRevealed && Date.now() - lastMessageAt > IDLE_THRESHOLD_MS) {
-      returnToAttractMode();
+    if (Date.now() - lastMessageAt > IDLE_THRESHOLD_MS) {
+      location.href = '/globe-attract';
     }
   }, IDLE_CHECK_INTERVAL_MS);
-
-  if (!isRevealed) {
-    enterAttractMode();
-  }
 
   function render() {
     const color = lerpColor(DORMANT_COLOR, THRIVING_COLOR, state.healthValue / HEALTH_MAX);
@@ -238,10 +83,6 @@
     fillEl.style.backgroundColor = color;
     stageEl.textContent = stageForHealth(state.healthValue);
     countEl.textContent = `${state.messageCount} message${state.messageCount === 1 ? '' : 's'} received`;
-    // Covers both the initial load (already-engaged kiosk should start
-    // revealed, not replay attract mode) and every subsequent message —
-    // idempotent, so calling it every render is harmless.
-    if (state.messageCount > 0) revealGlobe();
   }
 
   function onMessageReceived() {
