@@ -13,10 +13,7 @@
   const percentEl = document.getElementById('healthPercent');
   const actionFeedEl = document.getElementById('actionFeed');
   const qaTrackEl = document.getElementById('qaBannerTrack');
-  const liveIncomingEl = document.getElementById('liveIncoming');
-  const liveIncomingTextEl = document.getElementById('liveIncomingText');
-  const liveOutgoingEl = document.getElementById('liveOutgoing');
-  const liveOutgoingTextEl = document.getElementById('liveOutgoingText');
+  const liveFeedEl = document.getElementById('liveFeed');
 
   // Fetched at load time from a Next.js API route rather than a build-time-
   // generated shared/config.js — this page now lives in the Next.js app's
@@ -168,20 +165,36 @@
 
   render();
 
-  // --- live incoming/outgoing -------------------------------------------
-  // The most recent real question + answer, shown at full length (never
-  // truncated) — replaces whatever was there before each time a new
-  // exchange arrives. Independent of the health-bar/action-feed logic
-  // above.
+  // --- live messaging feed ------------------------------------------------
+  // Real questions + answers, shown at full length (never truncated),
+  // appended as they happen — same cap/fade-in pattern as the action feed
+  // above. Built with DOM methods (not innerHTML) since question/answer
+  // are visitor-typed text, not the fixed ACTION_PHRASES strings.
+  const MAX_LIVE_FEED_ENTRIES = 3;
+
   function showLiveExchange(question, answer) {
-    liveIncomingTextEl.textContent = question;
-    liveOutgoingTextEl.textContent = answer;
-    [liveIncomingEl, liveOutgoingEl].forEach((el) => {
-      el.hidden = false;
-      el.style.animation = 'none';
-      void el.offsetWidth; // force reflow so the fade-in restarts cleanly
-      el.style.animation = '';
-    });
+    const entry = document.createElement('div');
+    entry.className = 'liveFeedEntry';
+
+    const qLabel = document.createElement('p');
+    qLabel.className = 'liveLabel';
+    qLabel.textContent = '📥 Incoming';
+    const qText = document.createElement('p');
+    qText.className = 'liveText';
+    qText.textContent = question;
+
+    const aLabel = document.createElement('p');
+    aLabel.className = 'liveLabel';
+    aLabel.textContent = '🍄 Outgoing';
+    const aText = document.createElement('p');
+    aText.className = 'liveText';
+    aText.textContent = answer;
+
+    entry.append(qLabel, qText, aLabel, aText);
+    liveFeedEl.appendChild(entry);
+    if (liveFeedEl.children.length > MAX_LIVE_FEED_ENTRIES) {
+      liveFeedEl.removeChild(liveFeedEl.firstChild);
+    }
   }
 
   // --- debug slider (only shown with ?debug in the URL) ------------------
