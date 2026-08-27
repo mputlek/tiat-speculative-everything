@@ -12,7 +12,6 @@
   const countEl = document.getElementById('healthCount');
   const percentEl = document.getElementById('healthPercent');
   const actionFeedEl = document.getElementById('actionFeed');
-  const qaTrackEl = document.getElementById('qaBannerTrack');
   const liveFeedEl = document.getElementById('liveFeed');
 
   // Fetched at load time from a Next.js API route rather than a build-time-
@@ -167,10 +166,13 @@
 
   // --- live messaging feed ------------------------------------------------
   // Real questions + answers, shown at full length (never truncated),
-  // appended as they happen — same cap/fade-in pattern as the action feed
-  // above. Built with DOM methods (not innerHTML) since question/answer
-  // are visitor-typed text, not the fixed ACTION_PHRASES strings.
-  const MAX_LIVE_FEED_ENTRIES = 3;
+  // appended as they happen and auto-scrolled into view — older entries
+  // scroll up and off the top rather than jump-cutting. Built with DOM
+  // methods (not innerHTML) since question/answer are visitor-typed text,
+  // not the fixed ACTION_PHRASES strings. The cap here only bounds
+  // DOM/memory growth over a long-running kiosk session — it's not what
+  // controls what's visible, the scrolling is.
+  const MAX_LIVE_FEED_ENTRIES = 20;
 
   function showLiveExchange(question, answer) {
     const entry = document.createElement('div');
@@ -192,9 +194,10 @@
 
     entry.append(qLabel, qText, aLabel, aText);
     liveFeedEl.appendChild(entry);
-    if (liveFeedEl.children.length > MAX_LIVE_FEED_ENTRIES) {
+    while (liveFeedEl.children.length > MAX_LIVE_FEED_ENTRIES) {
       liveFeedEl.removeChild(liveFeedEl.firstChild);
     }
+    liveFeedEl.scrollTo({ top: liveFeedEl.scrollHeight, behavior: 'smooth' });
   }
 
   // --- debug slider (only shown with ?debug in the URL) ------------------
@@ -255,46 +258,6 @@
   channel.subscribe('exchange', (msg) => {
     showLiveExchange(msg.data.question, msg.data.answer);
   });
-
-  // --- Q&A banner ---------------------------------------------------------
-  // Scrolling one-liner at the bottom of the page, cycling through the Q&A
-  // pairs one at a time — independent of the globe visuals below, same
-  // reasoning as the Ably setup above.
-  (async function setUpQaBanner() {
-    let qaPairs = [];
-    try {
-      const data = await fetch('/api/globe-qa').then((r) => r.json());
-      qaPairs = data.pairs || [];
-    } catch (e) {
-      qaPairs = [];
-    }
-    // Shuffle once per page load for variety across sessions.
-    for (let i = qaPairs.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [qaPairs[i], qaPairs[j]] = [qaPairs[j], qaPairs[i]];
-    }
-
-    const SCROLL_SPEED_PX_PER_SEC = 80; // tune for readability
-    let qaIndex = 0;
-
-    function showNextQaPair() {
-      if (!qaPairs.length) return;
-      const pair = qaPairs[qaIndex % qaPairs.length];
-      qaIndex++;
-      qaTrackEl.textContent = `🍄 ${pair.question} — ${pair.answer}`;
-      qaTrackEl.style.animation = 'none';
-      void qaTrackEl.offsetWidth; // force reflow so the animation restarts cleanly
-      const trackWidth = qaTrackEl.scrollWidth;
-      const viewportWidth = window.innerWidth;
-      qaTrackEl.style.setProperty('--start-x', `${viewportWidth}px`);
-      qaTrackEl.style.setProperty('--end-x', `${-trackWidth}px`);
-      const duration = (trackWidth + viewportWidth) / SCROLL_SPEED_PX_PER_SEC;
-      qaTrackEl.style.animation = `qaScroll ${duration}s linear forwards`;
-    }
-
-    qaTrackEl.addEventListener('animationend', showNextQaPair);
-    if (qaPairs.length) showNextQaPair();
-  })();
 
   // --- globe visuals ------------------------------------------------------
   // Everything below is best-effort: if texture loading or canvas

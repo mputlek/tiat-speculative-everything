@@ -134,53 +134,24 @@ html, body {
   }
 }
 
-/* Bottom banner scrolling through the Q&A pairs one at a time. */
-.qaBanner {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 44px;
-  overflow: hidden;
-  background: rgba(243, 230, 235, 0.92);
-  border-top: 1px solid rgba(74, 59, 54, 0.15);
-  pointer-events: none;
-}
-
-.qaBannerTrack {
-  position: absolute;
-  top: 0;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  white-space: nowrap;
-  font-size: 1.25rem;
-  color: #4a3b36;
-  will-change: transform;
-}
-
-@keyframes qaScroll {
-  from {
-    transform: translateX(var(--start-x, 100vw));
-  }
-  to {
-    transform: translateX(var(--end-x, -100%));
-  }
-}
-
 /* Live messaging feed: real questions + answers, shown at full length (no
-   truncation) — long text just wraps. Newest entry at the bottom, oldest
-   dropped past MAX_LIVE_FEED_ENTRIES (script.js), same pattern as
-   .actionFeed above. */
+   truncation) — long text just wraps. Starts at the top and auto-scrolls
+   (script.js) as new entries are appended, so older ones scroll up and
+   off rather than jump-cutting; MAX_LIVE_FEED_ENTRIES only bounds
+   DOM/memory growth, not what's visible. overflow: hidden since scrolling
+   here is entirely programmatic (scrollTo), never user-driven — this is
+   a kiosk display, pointer-events stay off throughout. */
 .liveFeed {
   position: fixed;
-  top: 50%;
+  top: 24px;
+  bottom: 24px;
   right: 24px;
   width: 300px;
   max-width: calc(50vw - 48px);
   display: flex;
   flex-direction: column;
   gap: 16px;
+  overflow: hidden;
   pointer-events: none;
 }
 
