@@ -174,7 +174,6 @@ html, body {
 .livePanel {
   position: fixed;
   top: 50%;
-  transform: translateY(-50%);
   width: 300px;
   max-width: calc(50vw - 48px);
   pointer-events: none;
