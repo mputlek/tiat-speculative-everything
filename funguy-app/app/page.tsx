@@ -14,6 +14,21 @@ type Modal = null | { type: "topics" } | { type: "questions"; topic: Topic };
 
 const GREETING = "Hello, friend! I'm the mycelium network beneath your feet. I've been listening, growing and connecting everything for millions of years. What would you like to know about me?";
 
+const SESSION_ID_KEY = "funguy-session-id";
+
+// One id per browser tab, generated once and reused for every message in
+// this conversation — lets the interactions log group a visitor's
+// questions together without identifying them personally.
+function getSessionId(): string {
+  if (typeof window === "undefined") return "";
+  let id = sessionStorage.getItem(SESSION_ID_KEY);
+  if (!id) {
+    id = crypto.randomUUID();
+    sessionStorage.setItem(SESSION_ID_KEY, id);
+  }
+  return id;
+}
+
 export default function Home() {
   const [intro, setIntro] = useState(true);
   const [view, setView] = useState<"home" | "chat" | "message">("home");
@@ -45,7 +60,7 @@ export default function Home() {
         fetch("/api/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ messages: next }),
+          body: JSON.stringify({ messages: next, sessionId: getSessionId() }),
         }),
         new Promise((r) => setTimeout(r, 2500)),
       ]);

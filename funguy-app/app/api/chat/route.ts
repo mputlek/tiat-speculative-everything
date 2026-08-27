@@ -1,5 +1,6 @@
 import OpenAI from "openai";
 import Ably from "ably";
+import { after } from "next/server";
 import { readFileSync } from "fs";
 import { join } from "path";
 import { logInteraction } from "../../../lib/interactionLog";
@@ -70,7 +71,7 @@ async function publishToGlobe(text: string) {
 }
 
 export async function POST(request: Request) {
-  const { messages } = await request.json();
+  const { messages, sessionId } = await request.json();
 
   const lastUserMessage = [...messages]
     .reverse()
@@ -85,7 +86,11 @@ export async function POST(request: Request) {
     // Still publish to the globe like any other message, but skip the LLM
     // call entirely — this question has a pre-written answer.
     await (lastUserMessage ? publishToGlobe(lastUserMessage.content) : Promise.resolve());
-    if (lastUserMessage) await logInteraction(lastUserMessage.content, canned);
+    if (lastUserMessage) {
+      // Runs after the response is flushed, so the DB write can never add
+      // latency to (or break) the visitor's reply.
+      after(() => logInteraction(lastUserMessage.content, canned, sessionId));
+    }
     console.log(`[chat] served canned answer for: "${lastUserMessage?.content}"`);
     return Response.json({ reply: canned });
   }
@@ -130,6 +135,8 @@ ${knowledge}`;
   );
 
   const reply = response.output_text ?? "";
-  if (lastUserMessage) await logInteraction(lastUserMessage.content, reply);
+  if (lastUserMessage) {
+    after(() => logInteraction(lastUserMessage.content, reply, sessionId));
+  }
   return Response.json({ reply });
 }

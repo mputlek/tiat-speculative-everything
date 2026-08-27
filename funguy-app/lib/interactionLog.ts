@@ -1,23 +1,24 @@
-import { getStore } from "@netlify/blobs";
+import { getDatabase } from "@netlify/database";
 
-const STORE_NAME = "interactions";
-
-// Best-effort, one-record-per-interaction log. One blob per interaction
-// (rather than one growing JSON array) avoids read-modify-write races
-// between concurrent requests — matches the pattern already used for
-// publishToGlobe() in app/api/chat/route.ts. Failures are caught here so
-// logging can never affect the chat reply the visitor is waiting for.
-export async function logInteraction(question: string, answer: string): Promise<void> {
+// Best-effort interaction log, backed by Netlify Database (Postgres) —
+// see netlify/database/migrations/20260826000000_create_interactions.sql
+// for the schema. getDatabase() is called inside the function, not at
+// module scope, since Next.js evaluates route modules at build time too
+// (same reasoning as the lazy getClient() in app/api/chat/route.ts).
+// Failures are caught here so logging can never affect the chat reply
+// the visitor is waiting for. The sql tagged template auto-parameterizes
+// interpolated values, so visitor-typed text can't inject SQL.
+export async function logInteraction(
+  question: string,
+  answer: string,
+  sessionId?: string
+): Promise<void> {
   try {
-    const store = getStore(STORE_NAME);
-    const now = new Date();
-    const key = `${now.getTime()}-${Math.random().toString(36).slice(2, 8)}`;
-    await store.setJSON(key, {
-      date: now.toISOString().slice(0, 10), // YYYY-MM-DD
-      time: now.toISOString().slice(11, 19), // HH:MM:SS (UTC)
-      question,
-      answer,
-    });
+    const db = getDatabase();
+    await db.sql`
+      INSERT INTO interactions (question, answer, session_id)
+      VALUES (${question}, ${answer}, ${sessionId ?? null})
+    `;
   } catch (err) {
     console.error("[interactionLog] Failed to log interaction:", err);
   }
