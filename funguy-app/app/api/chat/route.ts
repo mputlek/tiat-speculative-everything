@@ -70,6 +70,21 @@ async function publishToGlobe(text: string) {
   }
 }
 
+// Separate from publishToGlobe(): that one fires the moment the question
+// arrives (drives the health-bar bump immediately), while this fires once
+// the answer is known, carrying the full Q&A pair for /globe's live
+// incoming/outgoing display. Best-effort, same as publishToGlobe above.
+async function publishExchange(question: string, answer: string) {
+  if (!process.env.ABLY_API_KEY) return;
+  try {
+    const ably = new Ably.Rest({ key: process.env.ABLY_API_KEY });
+    const channel = ably.channels.get(ABLY_CHANNEL_NAME);
+    await channel.publish("exchange", { question, answer, ts: Date.now() });
+  } catch (err) {
+    console.error("[ably] Failed to publish exchange to globe:", err);
+  }
+}
+
 export async function POST(request: Request) {
   const { messages, sessionId } = await request.json();
 
@@ -87,9 +102,10 @@ export async function POST(request: Request) {
     // call entirely — this question has a pre-written answer.
     await (lastUserMessage ? publishToGlobe(lastUserMessage.content) : Promise.resolve());
     if (lastUserMessage) {
-      // Runs after the response is flushed, so the DB write can never add
-      // latency to (or break) the visitor's reply.
+      // Runs after the response is flushed, so these can never add latency
+      // to (or break) the visitor's reply.
       after(() => logInteraction(lastUserMessage.content, canned, sessionId));
+      after(() => publishExchange(lastUserMessage.content, canned));
     }
     console.log(`[chat] served canned answer for: "${lastUserMessage?.content}"`);
     return Response.json({ reply: canned });
@@ -137,6 +153,7 @@ ${knowledge}`;
   const reply = response.output_text ?? "";
   if (lastUserMessage) {
     after(() => logInteraction(lastUserMessage.content, reply, sessionId));
+    after(() => publishExchange(lastUserMessage.content, reply));
   }
   return Response.json({ reply });
 }

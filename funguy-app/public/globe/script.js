@@ -13,6 +13,10 @@
   const percentEl = document.getElementById('healthPercent');
   const actionFeedEl = document.getElementById('actionFeed');
   const qaTrackEl = document.getElementById('qaBannerTrack');
+  const liveIncomingEl = document.getElementById('liveIncoming');
+  const liveIncomingTextEl = document.getElementById('liveIncomingText');
+  const liveOutgoingEl = document.getElementById('liveOutgoing');
+  const liveOutgoingTextEl = document.getElementById('liveOutgoingText');
 
   // Fetched at load time from a Next.js API route rather than a build-time-
   // generated shared/config.js — this page now lives in the Next.js app's
@@ -164,6 +168,22 @@
 
   render();
 
+  // --- live incoming/outgoing -------------------------------------------
+  // The most recent real question + answer, shown at full length (never
+  // truncated) — replaces whatever was there before each time a new
+  // exchange arrives. Independent of the health-bar/action-feed logic
+  // above.
+  function showLiveExchange(question, answer) {
+    liveIncomingTextEl.textContent = question;
+    liveOutgoingTextEl.textContent = answer;
+    [liveIncomingEl, liveOutgoingEl].forEach((el) => {
+      el.hidden = false;
+      el.style.animation = 'none';
+      void el.offsetWidth; // force reflow so the fade-in restarts cleanly
+      el.style.animation = '';
+    });
+  }
+
   // --- debug slider (only shown with ?debug in the URL) ------------------
   // Scrubs healthValue/messageCount directly so the Dormant -> Thriving
   // transition can be previewed without sending real Ably messages. Lives
@@ -217,6 +237,10 @@
   channel.subscribe('message', (msg) => {
     console.log('Received message from mycelium visitor:', msg.data);
     onMessageReceived();
+  });
+
+  channel.subscribe('exchange', (msg) => {
+    showLiveExchange(msg.data.question, msg.data.answer);
   });
 
   // --- Q&A banner ---------------------------------------------------------

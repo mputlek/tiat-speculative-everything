@@ -42,6 +42,18 @@
     <div class="qaBannerTrack" id="qaBannerTrack"></div>
   </div>
 
+  <!-- Live incoming/outgoing: the most recent real question + answer,
+       full length, updated as visitors actually chat. Hidden until the
+       first one arrives. -->
+  <div class="livePanel liveIncoming" id="liveIncoming" hidden>
+    <p class="liveLabel">📥 Incoming</p>
+    <p class="liveText" id="liveIncomingText"></p>
+  </div>
+  <div class="livePanel liveOutgoing" id="liveOutgoing" hidden>
+    <p class="liveLabel">🍄 Outgoing</p>
+    <p class="liveText" id="liveOutgoingText"></p>
+  </div>
+
   <script src="https://cdn.ably.com/lib/ably.min-2.js"></script>
   <script src="//unpkg.com/globe.gl"></script>
   <script src="script.js"></script>
