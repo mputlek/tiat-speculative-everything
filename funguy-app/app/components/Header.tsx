@@ -9,7 +9,7 @@ interface HeaderProps {
   view: "home" | "chat" | "message";
 }
 
-export default function Header({ onPickTopic, onShowChat, onShowMessage, view }: HeaderProps) {
+export default function Header({ onPickTopic, onShowChat, onShowMessage }: HeaderProps) {
   return (
     <header className="flex items-center justify-between px-5 h-14 border-b border-[var(--color-border-subtle)] bg-[var(--color-bg-secondary)]">
       <button
@@ -30,19 +30,9 @@ export default function Header({ onPickTopic, onShowChat, onShowMessage, view }:
 
       <button
         onClick={onShowMessage}
-        className={`flex items-center gap-1.5 px-3.5 py-2 rounded-full text-sm whitespace-nowrap transition-colors ${
-          view === "message"
-            ? "bg-[var(--color-interactive-primary)] text-white"
-            : "border border-[var(--color-border-default)] text-[var(--color-icon-primary)] hover:bg-[var(--color-bg-tertiary)]"
-        }`}
+        className="flex items-center gap-1.5 px-3.5 py-2 rounded-full text-sm whitespace-nowrap bg-[var(--color-interactive-danger)] text-[var(--color-text-on-inverse)] transition-opacity hover:opacity-90"
       >
-        <Image
-          src="/assets/icon-message.svg"
-          alt=""
-          width={16}
-          height={16}
-          className={view === "message" ? "brightness-0 invert" : ""}
-        />
+        <Image src="/assets/icon-message.svg" alt="" width={16} height={16} className="brightness-0 invert" />
         <span>End Conversation</span>
       </button>
     </header>
