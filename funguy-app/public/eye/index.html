@@ -699,34 +699,11 @@ window.addEventListener('touchend',e=>{
 
 document.getElementById('start').addEventListener('click',()=>{ begin(); });
 
-// ---- kiosk integration: back gesture and idle timeout both just reload
-// /eye in place. /eye is a standalone display with no ties to the
-// chat/globe kiosk flow, so unlike /globe it must never hand off to
-// /begin -- /begin auto-forwards to /globe on the next chat message from
-// ANY kiosk, which would silently sweep an idle /eye display into /globe.
-// No keyboard is exposed to visitors here, so the right-click context menu
-// is the main remaining escape route via mouse/trackpad -- blocked
-// unconditionally, since this page only ever runs on the kiosk display.
+// ---- kiosk integration: no keyboard is exposed to visitors here, so the
+// right-click context menu is the main remaining escape route via
+// mouse/trackpad -- blocked unconditionally, since this page only ever
+// runs on the kiosk display.
 document.addEventListener('contextmenu',e=>e.preventDefault());
-
-// Trap the back button/swipe-back gesture: push a duplicate history entry
-// on load, then intercept the resulting popstate (fires on back button,
-// trackpad swipe-back, or Backspace/Alt+Left) and reload /eye instead of
-// whatever default back-navigation would otherwise do.
-history.pushState(null,'',location.href);
-window.addEventListener('popstate',()=>{ location.reload(); });
-
-// Idle timeout: 2 minutes of no interaction -> reload /eye. Starts
-// counting from page load (not from clicking BEGIN), so a visitor who
-// never interacts at all still cycles back.
-const IDLE_THRESHOLD_MS=2*60*1000;
-const IDLE_CHECK_INTERVAL_MS=15000;
-let lastInteractionAt=Date.now();
-['pointerdown','mousemove','touchstart'].forEach(evt=>
-  window.addEventListener(evt,()=>{ lastInteractionAt=Date.now(); },{passive:true}));
-setInterval(()=>{
-  if(Date.now()-lastInteractionAt>IDLE_THRESHOLD_MS) location.reload();
-},IDLE_CHECK_INTERVAL_MS);
 </script>
 </body>
 </html>
