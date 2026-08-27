@@ -165,69 +165,39 @@
   render();
 
   // --- live messaging feed ------------------------------------------------
-  // Real questions + answers, shown at full length (never truncated),
-  // continuously auto-scrolling — same conveyor mechanism the old bottom
-  // Q&A ticker used (one item visible, scrolling past, then the next),
-  // just vertical, and cycling through live exchanges instead of a fixed
-  // canned list. Built with DOM methods (not innerHTML) since
-  // question/answer are visitor-typed text, not fixed strings.
-  const MAX_LIVE_ENTRIES = 20; // bounds memory only, not what's visible
-  const LIVE_SCROLL_SPEED_PX_PER_SEC = 60;
-  let liveEntries = [];
-  let liveIndex = 0;
-  let liveCycleStarted = false;
+  // The most recent real question + answer, shown at full length (never
+  // truncated). Slides into place at the top and holds there statically
+  // until the next exchange replaces it — no cycling/looping through
+  // history. Built with DOM methods (not innerHTML) since question/answer
+  // are visitor-typed text, not fixed strings.
+  let receivedLiveExchange = false;
 
-  function buildLiveEntryEl(question, answer) {
+  function showLiveExchange(question, answer) {
+    liveFeedEl.replaceChildren();
+
     const entry = document.createElement('div');
     entry.className = 'liveFeedEntry';
 
     const qLabel = document.createElement('p');
     qLabel.className = 'liveLabel';
-    qLabel.textContent = '📥 Incoming';
+    qLabel.textContent = '📥 You';
     const qText = document.createElement('p');
     qText.className = 'liveText';
     qText.textContent = question;
 
     const aLabel = document.createElement('p');
     aLabel.className = 'liveLabel';
-    aLabel.textContent = '🍄 Outgoing';
+    aLabel.textContent = '🍄 The Fun-Guy';
     const aText = document.createElement('p');
     aText.className = 'liveText';
     aText.textContent = answer;
 
     entry.append(qLabel, qText, aLabel, aText);
-    return entry;
-  }
-
-  function showNextLiveEntry() {
-    if (!liveEntries.length) return;
-    const { question, answer } = liveEntries[liveIndex % liveEntries.length];
-    liveIndex++;
-
-    liveFeedEl.replaceChildren();
-    const entry = buildLiveEntryEl(question, answer);
     liveFeedEl.appendChild(entry);
 
     entry.style.animation = 'none';
     void entry.offsetHeight; // force reflow so the animation restarts cleanly
-    const containerHeight = liveFeedEl.clientHeight;
-    const entryHeight = entry.scrollHeight;
-    entry.style.setProperty('--start-y', `${containerHeight}px`);
-    entry.style.setProperty('--end-y', `${-entryHeight}px`);
-    const duration = (containerHeight + entryHeight) / LIVE_SCROLL_SPEED_PX_PER_SEC;
-    entry.style.animation = `liveScroll ${duration}s linear forwards`;
-    entry.addEventListener('animationend', showNextLiveEntry, { once: true });
-  }
-
-  function showLiveExchange(question, answer) {
-    liveEntries.push({ question, answer });
-    if (liveEntries.length > MAX_LIVE_ENTRIES) {
-      liveEntries.shift();
-    }
-    if (!liveCycleStarted) {
-      liveCycleStarted = true;
-      showNextLiveEntry();
-    }
+    entry.style.animation = 'liveSlideIn 0.6s ease-out forwards';
   }
 
   // --- debug slider (only shown with ?debug in the URL) ------------------
@@ -286,8 +256,26 @@
   });
 
   channel.subscribe('exchange', (msg) => {
+    receivedLiveExchange = true;
     showLiveExchange(msg.data.question, msg.data.answer);
   });
+
+  // Catch-up: the very first exchange of a visit is often already gone by
+  // the time the subscription above is live (page navigation from /begin
+  // takes longer than how fast a canned answer's exchange event follows
+  // its message event) — Ably doesn't replay past events to a new
+  // subscriber. Seed the feed with the most recently logged interaction
+  // so the screen never starts empty/misses that first one. Guarded so a
+  // genuinely live exchange that arrives first isn't clobbered by a late-
+  // resolving, now-stale catch-up response.
+  fetch('/api/globe-latest-exchange')
+    .then((r) => r.json())
+    .then((data) => {
+      if (!receivedLiveExchange && data && data.exchange) {
+        showLiveExchange(data.exchange.question, data.exchange.answer);
+      }
+    })
+    .catch(() => {});
 
   // --- globe visuals ------------------------------------------------------
   // Everything below is best-effort: if texture loading or canvas
