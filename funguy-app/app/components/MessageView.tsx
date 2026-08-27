@@ -63,11 +63,11 @@ export default function MessageView() {
             {text.trim() && (
               <button
                 onClick={handleSend}
-                className="flex items-center justify-center gap-2 h-11 rounded-full bg-[var(--color-interactive-accent)] shrink-0 self-center transition-opacity hover:opacity-90 active:scale-[0.98]"
+                className="flex items-center justify-center gap-2 h-11 rounded-full bg-[var(--color-interactive-danger)] shrink-0 self-center transition-opacity hover:opacity-90 active:scale-[0.98]"
                 style={{ width: 300 }}
               >
-                <span className="text-sm font-semibold text-[var(--color-text-accent)]">
-                  Send Message
+                <span className="text-sm font-semibold text-[var(--color-text-on-inverse)]">
+                  End Conversation
                 </span>
                 <Image src="/assets/icon-arrow-right.svg" alt="" width={14} height={14} />
               </button>

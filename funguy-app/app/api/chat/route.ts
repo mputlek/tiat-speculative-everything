@@ -2,6 +2,7 @@ import OpenAI from "openai";
 import Ably from "ably";
 import { readFileSync } from "fs";
 import { join } from "path";
+import { logInteraction } from "../../../lib/interactionLog";
 
 // Constructed lazily inside the handler, not at module scope — the OpenAI
 // client throws immediately if credentials are missing, and Next.js
@@ -84,6 +85,7 @@ export async function POST(request: Request) {
     // Still publish to the globe like any other message, but skip the LLM
     // call entirely — this question has a pre-written answer.
     await (lastUserMessage ? publishToGlobe(lastUserMessage.content) : Promise.resolve());
+    if (lastUserMessage) await logInteraction(lastUserMessage.content, canned);
     console.log(`[chat] served canned answer for: "${lastUserMessage?.content}"`);
     return Response.json({ reply: canned });
   }
@@ -128,5 +130,6 @@ ${knowledge}`;
   );
 
   const reply = response.output_text ?? "";
+  if (lastUserMessage) await logInteraction(lastUserMessage.content, reply);
   return Response.json({ reply });
 }

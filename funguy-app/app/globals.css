@@ -57,6 +57,7 @@
   /* Semantic — interactive */
   --color-interactive-primary: #1b4734;
   --color-interactive-accent:  #46793b;
+  --color-interactive-danger:  #dc2626;
 }
 
 @keyframes compost-fall {
