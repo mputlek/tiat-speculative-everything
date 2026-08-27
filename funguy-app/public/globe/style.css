@@ -135,12 +135,15 @@ html, body {
 }
 
 /* Live messaging feed: real questions + answers, shown at full length (no
-   truncation) — long text just wraps. Starts at the top and auto-scrolls
-   (script.js) as new entries are appended, so older ones scroll up and
-   off rather than jump-cutting; MAX_LIVE_FEED_ENTRIES only bounds
-   DOM/memory growth, not what's visible. overflow: hidden since scrolling
-   here is entirely programmatic (scrollTo), never user-driven — this is
-   a kiosk display, pointer-events stay off throughout. */
+   truncation) — long text just wraps. Continuously auto-scrolling, same
+   conveyor pattern as the old bottom Q&A ticker (one item visible,
+   scrolling past, then the next takes its place) but vertical: one
+   exchange at a time rises from the bottom edge to off the top, on a
+   loop through whatever's arrived so far (script.js's showNextLiveEntry).
+   overflow: hidden turns this into a fixed viewport; position: fixed
+   also makes it the containing block for the absolutely-positioned
+   .liveFeedEntry that scrolls through it. Kiosk display — pointer-events
+   stay off, motion is entirely programmatic. */
 .liveFeed {
   position: fixed;
   top: 24px;
@@ -148,31 +151,44 @@ html, body {
   right: 24px;
   width: 300px;
   max-width: calc(50vw - 48px);
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
   overflow: hidden;
   pointer-events: none;
 }
 
 .liveFeedEntry {
-  opacity: 0;
-  animation: actionEntryIn 0.6s ease-out forwards;
+  position: absolute;
+  left: 0;
+  right: 0;
+  will-change: transform;
 }
 
+@keyframes liveScroll {
+  from {
+    transform: translateY(var(--start-y, 100%));
+  }
+  to {
+    transform: translateY(var(--end-y, -100%));
+  }
+}
+
+/* Futuristic/HUD feel for the live feed specifically — labels in a
+   geometric display face, message text in a monospace "readout" face —
+   distinct from the rest of the page's rounded Quicksand. */
 .liveLabel {
   margin: 0 0 4px;
+  font-family: 'Orbitron', sans-serif;
   font-size: 0.75rem;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.08em;
   color: #8f8378;
 }
 
 .liveText {
   margin: 0 0 10px;
+  font-family: 'Share Tech Mono', ui-monospace, monospace;
   font-size: 1.05rem;
-  font-weight: 600;
+  font-weight: 400;
   line-height: 1.4;
   color: #4a3b36;
   word-wrap: break-word;

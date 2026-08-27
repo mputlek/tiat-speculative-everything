@@ -166,15 +166,18 @@
 
   // --- live messaging feed ------------------------------------------------
   // Real questions + answers, shown at full length (never truncated),
-  // appended as they happen and auto-scrolled into view — older entries
-  // scroll up and off the top rather than jump-cutting. Built with DOM
-  // methods (not innerHTML) since question/answer are visitor-typed text,
-  // not the fixed ACTION_PHRASES strings. The cap here only bounds
-  // DOM/memory growth over a long-running kiosk session — it's not what
-  // controls what's visible, the scrolling is.
-  const MAX_LIVE_FEED_ENTRIES = 20;
+  // continuously auto-scrolling — same conveyor mechanism the old bottom
+  // Q&A ticker used (one item visible, scrolling past, then the next),
+  // just vertical, and cycling through live exchanges instead of a fixed
+  // canned list. Built with DOM methods (not innerHTML) since
+  // question/answer are visitor-typed text, not fixed strings.
+  const MAX_LIVE_ENTRIES = 20; // bounds memory only, not what's visible
+  const LIVE_SCROLL_SPEED_PX_PER_SEC = 60;
+  let liveEntries = [];
+  let liveIndex = 0;
+  let liveCycleStarted = false;
 
-  function showLiveExchange(question, answer) {
+  function buildLiveEntryEl(question, answer) {
     const entry = document.createElement('div');
     entry.className = 'liveFeedEntry';
 
@@ -193,11 +196,38 @@
     aText.textContent = answer;
 
     entry.append(qLabel, qText, aLabel, aText);
+    return entry;
+  }
+
+  function showNextLiveEntry() {
+    if (!liveEntries.length) return;
+    const { question, answer } = liveEntries[liveIndex % liveEntries.length];
+    liveIndex++;
+
+    liveFeedEl.replaceChildren();
+    const entry = buildLiveEntryEl(question, answer);
     liveFeedEl.appendChild(entry);
-    while (liveFeedEl.children.length > MAX_LIVE_FEED_ENTRIES) {
-      liveFeedEl.removeChild(liveFeedEl.firstChild);
+
+    entry.style.animation = 'none';
+    void entry.offsetHeight; // force reflow so the animation restarts cleanly
+    const containerHeight = liveFeedEl.clientHeight;
+    const entryHeight = entry.scrollHeight;
+    entry.style.setProperty('--start-y', `${containerHeight}px`);
+    entry.style.setProperty('--end-y', `${-entryHeight}px`);
+    const duration = (containerHeight + entryHeight) / LIVE_SCROLL_SPEED_PX_PER_SEC;
+    entry.style.animation = `liveScroll ${duration}s linear forwards`;
+    entry.addEventListener('animationend', showNextLiveEntry, { once: true });
+  }
+
+  function showLiveExchange(question, answer) {
+    liveEntries.push({ question, answer });
+    if (liveEntries.length > MAX_LIVE_ENTRIES) {
+      liveEntries.shift();
     }
-    liveFeedEl.scrollTo({ top: liveFeedEl.scrollHeight, behavior: 'smooth' });
+    if (!liveCycleStarted) {
+      liveCycleStarted = true;
+      showNextLiveEntry();
+    }
   }
 
   // --- debug slider (only shown with ?debug in the URL) ------------------
