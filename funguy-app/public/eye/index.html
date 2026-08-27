@@ -698,6 +698,33 @@ window.addEventListener('touchend',e=>{
 });
 
 document.getElementById('start').addEventListener('click',()=>{ begin(); });
+
+// ---- kiosk integration: back gesture and idle timeout both return to
+// /begin (the attract screen), matching /globe/script.js's idle behavior.
+// No keyboard is exposed to visitors here, so the right-click context menu
+// is the main remaining escape route via mouse/trackpad -- blocked
+// unconditionally, since this page only ever runs on the kiosk display.
+document.addEventListener('contextmenu',e=>e.preventDefault());
+
+// Trap the back button/swipe-back gesture: push a duplicate history entry
+// on load, then intercept the resulting popstate (fires on back button,
+// trackpad swipe-back, or Backspace/Alt+Left) and send it to /begin
+// instead of whatever default back-navigation would otherwise do.
+history.pushState(null,'',location.href);
+window.addEventListener('popstate',()=>{ location.href='/begin'; });
+
+// Idle timeout: 2 minutes of no interaction -> back to /begin, same
+// threshold /globe uses. Starts counting from page load (not from
+// clicking BEGIN), so a visitor who never interacts at all still cycles
+// back.
+const IDLE_THRESHOLD_MS=2*60*1000;
+const IDLE_CHECK_INTERVAL_MS=15000;
+let lastInteractionAt=Date.now();
+['pointerdown','mousemove','touchstart'].forEach(evt=>
+  window.addEventListener(evt,()=>{ lastInteractionAt=Date.now(); },{passive:true}));
+setInterval(()=>{
+  if(Date.now()-lastInteractionAt>IDLE_THRESHOLD_MS) location.href='/begin';
+},IDLE_CHECK_INTERVAL_MS);
 </script>
 </body>
 </html>
