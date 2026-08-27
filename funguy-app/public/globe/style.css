@@ -154,7 +154,7 @@ html, body {
   display: flex;
   align-items: center;
   white-space: nowrap;
-  font-size: 0.85rem;
+  font-size: 1.25rem;
   color: #4a3b36;
   will-change: transform;
 }
