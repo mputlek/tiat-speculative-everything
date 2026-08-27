@@ -30,7 +30,7 @@ export default function Header({ onPickTopic, onShowChat, onShowMessage, view }:
 
       <button
         onClick={onShowMessage}
-        className={`flex items-center gap-1.5 px-3.5 py-2 rounded-full text-sm transition-colors ${
+        className={`flex items-center gap-1.5 px-3.5 py-2 rounded-full text-sm whitespace-nowrap transition-colors ${
           view === "message"
             ? "bg-[var(--color-interactive-primary)] text-white"
             : "border border-[var(--color-border-default)] text-[var(--color-icon-primary)] hover:bg-[var(--color-bg-tertiary)]"
@@ -43,7 +43,7 @@ export default function Header({ onPickTopic, onShowChat, onShowMessage, view }:
           height={16}
           className={view === "message" ? "brightness-0 invert" : ""}
         />
-        <span>Message</span>
+        <span>End Conversation</span>
       </button>
     </header>
   );

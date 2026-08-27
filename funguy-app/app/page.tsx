@@ -95,7 +95,15 @@ export default function Home() {
         {view === "chat" && (
           <ChatView messages={messages} loading={loading} bottomRef={messagesEndRef} />
         )}
-        {view === "message" && <MessageView />}
+        {view === "message" && (
+          <MessageView
+            onEnd={() => {
+              setMessages([]);
+              setAskedQuestions({});
+              setView("home");
+            }}
+          />
+        )}
       </main>
 
       {view === "chat" && (

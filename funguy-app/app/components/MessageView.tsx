@@ -15,7 +15,7 @@ function randomBetween(min: number, max: number) {
   return Math.random() * (max - min) + min;
 }
 
-export default function MessageView() {
+export default function MessageView({ onEnd }: { onEnd: () => void }) {
   const [text, setText] = useState("");
   const [compostItems, setCompostItems] = useState<CompostItem[]>([]);
   const [nextId, setNextId] = useState(0);
@@ -34,6 +34,9 @@ export default function MessageView() {
     ]);
     setNextId((n) => n + 1);
     setText("");
+    // Let the visitor see their note compost (matches the 0.85s
+    // compost-fall animation in globals.css) before returning to the app.
+    setTimeout(onEnd, 900);
   }
 
   return (
